@@ -204,56 +204,216 @@ useToneJsMidi();
 
 Verovio Toolkit をロードし、初期化されたインスタンスを取得します。
 
-```javascript
-// 本番環境の場合 (URL は .min.mjs に変更)
-// import { loadVerovio } from 'https://cdn.jsdelivr.net/gh/kogu0507/module@バージョン/verovio/loader.min.mjs';
+この例では、ボタンクリックによって Verovio を動的にロードし、MEI データをレンダリングして結果をページに表示します。
 
-// 開発環境（ローカル）の場合
-import { loadVerovio } from './verovio/loader.mjs';
+```html
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Verovio Loader Example</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover:not(:disabled) { background-color: #0056b3; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        #loading-status {
+            margin-top: 15px;
+            font-weight: bold;
+            color: #333;
+        }
+        #viewer {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            background-color: #f9f9f9;
+            min-height: 100px; /* 初期表示のための最小高さ */
+            overflow-x: auto; /* 楽譜がはみ出た場合にスクロールできるように */
+        }
+        #viewer svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Verovio ロードとレンダリングの例</h1>
+        <button id="load-verovio-btn">Verovio をロードして楽譜を表示</button>
+        <div id="loading-status">待機中...</div>
+        <div id="viewer"></div>
+    </div>
 
-async function useVerovio() {
-    try {
-        console.log('Verovio Toolkit のロードを開始...');
-        const verovioToolkit = await loadVerovio();
-        console.log('Verovio Toolkit がロード・初期化されました:', verovioToolkit);
+    <script type="module">
+        // jsDelivr 経由で loader.mjs をインポートします。
+        // 本番環境では loader.min.mjs を使用してください。
+        import { loadVerovio } from 'https://cdn.jsdelivr.net/gh/kogu0507/module@v1.0.0/verovio/loader.min.mjs';
 
-        const meiData = `<mei xmlns="http://www.music-encoding.org/ns/mei" meiversion="5.0.0">
-            <music><body><mdiv><score>
-                <scoreDef><staffGrp><staffDef n="1" lines="5" clef.shape="G" clef.line="2"/></staffGrp></scoreDef>
-                <section><measure n="1"><staff n="1"><layer n="1">
-                    <note xml:id="n1" dur="4" pname="c" oct="4"/>
-                    <note xml:id="n2" dur="4" pname="d" oct="4"/>
-                    <note xml:id="n3" dur="4" pname="e" oct="4"/>
-                    <note xml:id="n4" dur="4" pname="f" oct="4"/>
-                </layer></staff></measure></section>
-            </score></mdiv></body></music>
-        </mei>`;
+        const loadVerovioBtn = document.getElementById('load-verovio-btn');
+        const statusDiv = document.getElementById('loading-status');
+        const viewerDiv = document.getElementById('viewer');
 
-        verovioToolkit.setOptions({
-            pageHeight: 600,
-            pageWidth: 800
+        loadVerovioBtn.addEventListener('click', async () => {
+            loadVerovioBtn.disabled = true; // ボタンを無効化
+            statusDiv.textContent = 'Verovio Toolkit をロード中...';
+            viewerDiv.innerHTML = ''; // 以前の内容をクリア
+
+            try {
+                // Verovio Toolkit のロードと初期化を待つ
+                const verovioToolkit = await loadVerovio();
+                statusDiv.textContent = 'Verovio Toolkit の初期化完了。MEI データを取得しレンダリング中...';
+
+                // 外部の MEI サンプルデータを jsDelivr 経由で取得します。
+                // 自身のMEIデータを使う場合は、適切なURLまたは文字列をここに記述してください。
+                const sampleMeiUrl = 'https://cdn.jsdelivr.net/gh/kogu0507/module@v1.0.0/examples/sample.mei';
+                const resp = await fetch(sampleMeiUrl);
+                const meiData = await resp.text();
+
+                // MEI データをロードしてオプションを設定
+                verovioToolkit.loadData(meiData);
+                verovioToolkit.setOptions({
+                    pageWidth: 800,   // ページの幅を設定
+                    pageHeight: 600,  // ページの高さを設定 (必要に応じて)
+                    scale: 40         // スコアの表示スケール
+                });
+
+                // 楽譜を SVG としてレンダリング
+                const svg = verovioToolkit.renderToSVG(1, {}); // 最初のページをレンダリング
+                viewerDiv.innerHTML = svg; // 結果をページに挿入
+
+                statusDiv.textContent = 'Verovio による楽譜のレンダリングが完了しました！';
+
+            } catch (error) {
+                console.error('Verovio のロードまたはレンダリング中にエラーが発生しました:', error);
+                statusDiv.textContent = 'エラー: ' + error.message;
+                viewerDiv.innerHTML = '<p style="color: red;">楽譜の表示に失敗しました。</p>';
+            } finally {
+                loadVerovioBtn.disabled = false; // ボタンを再度有効化
+            }
         });
-
-        verovioToolkit.loadData(meiData);
-        const svg = verovioToolkit.renderToSVG(1);
-
-        console.log('Verovio でMEIデータをレンダリングしました (SVGの一部):', svg.substring(0, 500) + '...');
-        
-        document.body.insertAdjacentHTML('beforeend', `
-            <h2>Generated SVG</h2>
-            <div style="border: 1px solid #ccc; padding: 10px;">
-                ${svg}
-            </div>
-        `);
-
-
-    } catch (error) {
-        console.error('Verovio Toolkit のロードまたは使用に失敗しました:', error);
-    }
-}
-
-useVerovio();
+    </script>
+</body>
+</html>
 ```
+
+---
+
+
+このコード例は、WordPress のカスタムHTMLブロックに直接貼り付けることもできますし、単独の HTML ファイルとして開いて動作確認することも可能です。
+
+* **HTML & CSS:** 動作確認がしやすいように、簡単なUI要素（ボタン、ステータス表示、レンダリングエリア）と基本的なスタイルを含めました。
+* **非同期処理:** ボタンクリックで `loadVerovio()` を呼び出し、`await` で完了を待ちます。
+* **エラーハンドリング:** `try...catch` ブロックでエラーを捕捉し、ユーザーに分かりやすいメッセージを表示します。
+* **MEIデータの取得:** `sample.mei` も jsDelivr から取得するように明示しました。
+* **コメント:** コードの各部分に分かりやすいコメントを追記し、特に `Promise.all` のような説明が不要な単一モジュールのロードであるため、シンプルな説明にしています。
+
+
+---
+
+### 複合的な利用例 (Tone.js と Verovio の同時ロード)
+
+Tone.js と Verovio の両方をロードし、連携して使用する場合の例です。`Promise.all` を使用することで、複数の非同期処理を並行して効率的に実行し、全てのロード完了を待つことができます。
+
+**利用例 (WordPressカスタムHTMLブロック向け):**
+
+```html
+<style>
+    /* ... 既存のスタイル ... */
+</style>
+
+<div class="button-container">
+    <button id="load-all-btn">Tone.js と Verovio をロードして実行</button>
+    <button id="play-sound-btn" disabled>C4 の音を鳴らす (Tone.js)</button>
+</div>
+<div id="loading-status">待機中...</div>
+<div id="viewer"></div>
+
+<script type="module">
+    // jsDelivr 経由で各ローダーモジュールをインポート
+    import { loadVerovio } from 'https://cdn.jsdelivr.net/gh/kogu0507/module@v1.0.0/verovio/loader.min.mjs';
+    import { loadToneJs } from 'https://cdn.jsdelivr.net/gh/kogu0507/module@v1.0.0/tonejs/loader.min.mjs';
+
+
+    const loadAllBtn = document.getElementById('load-all-btn');
+    const playSoundBtn = document.getElementById('play-sound-btn');
+    const statusDiv = document.getElementById('loading-status');
+    const viewerDiv = document.getElementById('viewer');
+
+    let toneSynth = null; 
+    let verovioToolkit = null; 
+
+    loadAllBtn.addEventListener('click', async () => {
+        loadAllBtn.disabled = true;
+        statusDiv.textContent = 'Tone.js と Verovio を両方ロード中...';
+        viewerDiv.innerHTML = '';
+        playSoundBtn.disabled = true; 
+
+        try {
+            // Promise.all を使用して、両方を並行してロード
+            const [toneJsResult, verovioResult] = await Promise.all([
+                loadToneJs(),
+                loadVerovio()
+            ]);
+
+            verovioToolkit = verovioResult; 
+
+            statusDiv.textContent = 'ロード完了。Verovioで楽譜をレンダリングし、Tone.jsの準備中...';
+
+            // --- Verovio を使って楽譜をレンダリング ---
+            const sampleMeiUrl = 'https://cdn.jsdelivr.net/gh/kogu0507/module@v1.0.0/examples/sample.mei';
+            const resp = await fetch(sampleMeiUrl);
+            const mei = await resp.text();
+
+            verovioToolkit.loadData(mei);
+            verovioToolkit.setOptions({ pageWidth: 800, pageHeight: 600, scale: 40 });
+            const svg = verovioToolkit.renderToSVG(1, {});
+            viewerDiv.innerHTML = svg;
+
+            // --- Tone.js のシンセサイザーを初期化 ---
+            if (typeof Tone !== 'undefined' && Tone.Synth) {
+                toneSynth = new Tone.Synth().toDestination();
+                playSoundBtn.disabled = false; 
+            } else {
+                statusDiv.textContent += ' (Tone.js の初期化に失敗しました)';
+                console.error('Tone.js が正しくロードされていないか、Tone.Synth が見つかりません。');
+            }
+
+            statusDiv.textContent = '全ての処理が完了しました！';
+
+        } catch (error) {
+            console.error('ロードまたは処理中にエラーが発生しました:', error);
+            statusDiv.textContent = 'エラー: ' + error.message;
+        } finally {
+            loadAllBtn.disabled = false; 
+        }
+    });
+
+    playSoundBtn.addEventListener('click', async () => {
+        if (toneSynth) {
+            try {
+                await Tone.start();
+                toneSynth.triggerAttackRelease("C4", "8n");
+                console.log('C4 の音を再生しました。');
+            } catch (e) {
+                console.error('音の再生に失敗しました:', e);
+                statusDiv.textContent = '音再生エラー: ' + e.message;
+            }
+        } else {
+            statusDiv.textContent = 'Tone.js がまだ準備できていません。';
+        }
+    });
+
+</script>
+```
+
+---
 
 ## 開発者向け情報
 
