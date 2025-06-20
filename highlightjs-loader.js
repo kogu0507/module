@@ -2,44 +2,51 @@
 
 ;(function() {
   // ─── 設定 ─────────────────────────────────────────
-  var version = '11.11.0';     // highlight.js の CDN バージョン
-  var theme   = 'github-dark'; // 利用する CSS テーマ
+  // highlight.js の CDN バージョンとテーマを指定
+  var version = '11.11.0';
+  var theme   = 'github-dark';
 
-  // 既に highlight.js が読み込まれていたら何もしない
+  // もし既に hljs が読み込まれていたら処理を中断
   if (window.hljs) return;
 
   // ─── CSS を追加 ─────────────────────────────────────
-  // highlight.js 用のテーマ
+  // 1) highlight.js 用のテーマ
   var link = document.createElement('link');
   link.rel  = 'stylesheet';
   link.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/' +
               version + '/styles/' + theme + '.min.css';
   document.head.appendChild(link);
 
-  // コピーボタン用のスタイル（必要に応じてカスタマイズしてください）
+  // 2) コピーボタン用のスタイル（大きく＆目立つように調整）
   var style = document.createElement('style');
   style.textContent = `
-    /* <pre> を relative にしておくとボタン配置が楽 */
+    /* コードブロック (<pre>) を relative にしてボタン配置を制御しやすく */
     pre {
       position: relative;
     }
-    /* コピーボタンの見た目 */
+    /* コピーボタンの基本スタイル */
     .hljs-copy-button {
       position: absolute;
-      top: 0.25em;
-      right: 0.25em;
-      padding: 0.3em 0.6em;
-      font-size: 0.75em;
-      border: none;
-      border-radius: 4px;
-      background: rgba(0, 0, 0, 0.5);
-      color: #fff;
-      cursor: pointer;
-      opacity: 0.6;
-      transition: opacity 0.3s;
+      top: 0.5em;               /* 上から少し余裕を追加 */
+      right: 0.5em;             /* 右からも余裕を追加 */
+      padding: 0.5em 1em;       /* ボタン自体を大きく */
+      font-size: 1em;           /* 見やすい文字サイズ */
+      line-height: 1;           /* 高さを文字サイズに合わせる */
+      border: none;             /* 枠線なし */
+      border-radius: 4px;       /* 角を丸める */
+      background: rgba(0, 0, 0, 0.7); /* 濃い背景でコントラストを強調 */
+      color: #fff;              /* 白文字 */
+      cursor: pointer;          /* ホバー時にポインター */
+      opacity: 0.8;             /* やや半透明 */
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); /* 浮き上がり感 */
+      transition: opacity 0.2s ease, transform 0.2s ease; /* アニメーション */
+      z-index: 2;               /* コードテキストより手前に表示 */
     }
-    .hljs-copy-button:hover {
-      opacity: 1;
+    /* ホバー／フォーカス時の視覚フィードバック */
+    .hljs-copy-button:hover,
+    .hljs-copy-button:focus {
+      opacity: 1;               /* 完全に不透明化 */
+      transform: scale(1.05);   /* 少し拡大 */
     }
   `;
   document.head.appendChild(style);
@@ -48,7 +55,7 @@
   var script = document.createElement('script');
   script.src = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/' +
                version + '/highlight.min.js';
-  // 読み込みが完了したらハイライトとコピー機能の初期化
+  // 読み込み完了後にハイライト＆コピー機能を初期化
   script.onload = function() {
     if (window.hljs && typeof hljs.highlightAll === 'function') {
       // すべての <pre><code> をハイライト
@@ -70,15 +77,15 @@
    * すべての <pre><code> にコピー用ボタンを追加する
    */
   function addCopyButtons() {
-    // <pre><code> をすべて取得
     document.querySelectorAll('pre > code').forEach(function(codeBlock) {
-      var pre = codeBlock.parentNode; // 親の <pre>
+      var pre = codeBlock.parentNode;
 
       // ボタン要素を作成
       var button = document.createElement('button');
       button.className = 'hljs-copy-button';
       button.type = 'button';
-      button.innerText = 'Copy'; // 初期表示
+      button.innerText = 'Copy Code';                // ボタン文言をわかりやすく
+      button.setAttribute('aria-label', 'コードをコピー'); // アクセシビリティ向上
 
       // <pre> の中にボタンを追加
       pre.appendChild(button);
@@ -91,40 +98,34 @@
   }
 
   /**
-   * 文字列をクリップボードにコピーし、
-   * 成功・失敗時にボタン表示を変化させる
+   * テキストをクリップボードにコピーし、
+   * 成功／失敗時にボタンの表示を一時的に変化させる
    *
-   * @param {string} text   コピーするテキスト
-   * @param {HTMLButtonElement} button 押されたボタン要素
+   * @param {string} text
+   * @param {HTMLButtonElement} button
    */
   function copyCodeToClipboard(text, button) {
-    // まずは navigator.clipboard API を試す
     if (navigator.clipboard && navigator.clipboard.writeText) {
+      // 標準 API を使用
       navigator.clipboard.writeText(text).then(function() {
-        // 成功したらチェックマークを表示
         showTemporaryMessage(button, '✔', 2000);
       }).catch(function(err) {
         console.error('clipboard API によるコピー失敗:', err);
-        // フォールバック
         fallbackCopyText(text, button);
       });
     } else {
-      // API が使えない場合は execCommand フォールバック
+      // フォールバック
       fallbackCopyText(text, button);
     }
   }
 
   /**
-   * execCommand を用いたフォールバックコピー
-   *
-   * @param {string} text
-   * @param {HTMLButtonElement} button
+   * execCommand を使ったフォールバックコピー
    */
   function fallbackCopyText(text, button) {
-    // 一時的に textarea を作って選択・コピー
     var textarea = document.createElement('textarea');
     textarea.value = text;
-    textarea.style.position = 'fixed';  // 表示外に配置
+    textarea.style.position = 'fixed';
     textarea.style.left     = '-9999px';
     document.body.appendChild(textarea);
     textarea.focus();
@@ -138,16 +139,12 @@
       showTemporaryMessage(button, '✖', 2000);
     }
 
-    // 後片付け
     document.body.removeChild(textarea);
   }
 
   /**
-   * ボタンのテキストを一時的に入れ替え、数秒後に元に戻す
-   *
-   * @param {HTMLButtonElement} button
-   * @param {string} message   表示する一時テキスト
-   * @param {number} duration  リセットまでのミリ秒
+   * ボタンのテキストを一時的に置き換え、
+   * 指定ミリ秒後に元に戻す
    */
   function showTemporaryMessage(button, message, duration) {
     var original = button.innerText;
