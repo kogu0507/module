@@ -1,0 +1,34 @@
+<svg viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+`実際はwidth heightは削除して親要素に合わせる。viewBoxは削除しちゃだめ`
+
+  <defs>
+    <g id="DefNoteHead">
+      <path transform="scale(1,-1)" d="M0 -39c0 68 73 172 200 172c66 0 114 -37 114 -95c0 -84 -106 -171 -218 -171c-64 0 -96 30 -96 94z"/>
+    </g>
+
+    <g id="Flag">
+      <path transform="scale(1,-1)" d="M179 -646c15 29 29 55 46 102c18 49 30 108 30 138c0 105 -80 173 -168 200c-18 5 -47 9 -87 16v190h22c8 0 33 -61 71 -95c4 -3 -2 3 61 -56c62 -58 122 -137 122 -241c0 -38 -13 -106 -35 -163c-20 -51 -43 -99 -66 -132c-6 -5 -10 -7 -13 -7s-5 2 -5 5l4 10 c1 3 14 25 18 33z"/>
+    </g>
+  </defs>
+
+  <g transform="translate(050, 000) scale(0.90)">`余白なしで作っておいて、ここで縮小＆位置調整`
+    <g class="notehead" transform="translate(0,400)"> `リズムカードだからY座標は400で固定`
+      <use xlink:href="#DefNoteHead" transform="translate(000, 0) scale(0.4, 0.4)"/>
+      <use xlink:href="#DefNoteHead" transform="translate(750, 0) scale(0.4, 0.4)"/>
+    </g>
+
+    <g class="dots" transform="translate(175,400)">
+      <ellipse cx="000" cy="000" rx="15" ry="15" fill-opacity="1" stroke-opacity="1"/>
+    </g>
+    
+    <g class="stem" transform="translate(120,-10)">`タマの分だけX座標を→に移動 -10は微調整`
+      <path d="M000 100 L000 400" stroke-width="10" fill="black" stroke="black"/>
+      <path d="M750 100 L750 400" stroke-width="10" fill="black" stroke="black"/>
+    </g>
+
+    <g class="flag" transform="translate(115, 100)">`タマの分だけ115移動 Y座標はリズムカードだからステムの位置100で固定`
+      <use xlink:href="#Flag" transform="translate(750,000) scale(0.4, 0.4)"/>
+    </g>
+  </g>
+
+</svg>

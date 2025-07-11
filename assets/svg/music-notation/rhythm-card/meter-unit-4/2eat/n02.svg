@@ -1,0 +1,16 @@
+<svg viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+`実際はwidth100px height500pxは削除して親要素に合わせる。viewBoxは削除しちゃだめ`
+  <defs>
+    <g id="DefNoteHead">
+      <path transform="scale(1,-1)" d="M278 64c0 22 -17 39 -43 39c-12 0 -26 -3 -41 -10c-85 -43 -165 -94 -165 -156c5 -25 15 -32 49 -32c67 11 200 95 200 159zM0 -36c0 68 73 174 200 174c66 0 114 -39 114 -97c0 -84 -106 -173 -218 -173c-64 0 -96 32 -96 96z"/>
+    </g>
+  </defs>
+  <g transform="translate(050, 000) scale(0.90)">`余白なしで作っておいて、ここで縮小＆位置調整`
+    <g class="notehead" transform="translate(0,400)"> `リズムカードだからY座標は400で固定`
+      <use xlink:href="#DefNoteHead" transform="translate(000, 0) scale(0.4, 0.4)"/>
+    </g>
+    <g class="stem" transform="translate(120,-10)">`タマの分だけX座標を→に移動 -10は微調整`
+      <path d="M000 100 L000 400" stroke-width="10" fill="black" stroke="black"/>
+    </g>
+  </g>
+</svg>

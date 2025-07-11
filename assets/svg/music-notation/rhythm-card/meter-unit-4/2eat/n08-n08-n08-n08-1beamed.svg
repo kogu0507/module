@@ -1,0 +1,31 @@
+<svg viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+`実際はwidth heightは削除して親要素に合わせる。viewBoxは削除しちゃだめ`
+
+  <defs>
+    <g id="DefNoteHead">
+      <path transform="scale(1,-1)" d="M0 -39c0 68 73 172 200 172c66 0 114 -37 114 -95c0 -84 -106 -171 -218 -171c-64 0 -96 30 -96 94z"/>
+    </g>
+  </defs>
+
+  <g transform="translate(050, 000) scale(0.90)">`余白なしで作っておいて、ここで縮小＆位置調整`
+    <g class="notehead" transform="translate(0,400)"> `リズムカードだからY座標は400で固定`
+      <use xlink:href="#DefNoteHead" transform="translate(000, 0) scale(0.4, 0.4)"/>
+      <use xlink:href="#DefNoteHead" transform="translate(250, 0) scale(0.4, 0.4)"/>
+      <use xlink:href="#DefNoteHead" transform="translate(500, 0) scale(0.4, 0.4)"/>
+      <use xlink:href="#DefNoteHead" transform="translate(750, 0) scale(0.4, 0.4)"/>
+    </g>
+    
+    <g class="stem" transform="translate(120,-10)">`タマの分だけX座標を→に移動 -10は微調整`
+      <path d="M000 100 L000 400" stroke-width="10" fill="black" stroke="black"/>
+      <path d="M250 100 L250 400" stroke-width="10" fill="black" stroke="black"/>
+      <path d="M500 100 L500 400" stroke-width="10" fill="black" stroke="black"/>
+      <path d="M750 100 L750 400" stroke-width="10" fill="black" stroke="black"/>
+    </g>
+
+    <g class="beam" transform="translate(115,0) scale(1.014)">`タマの分だけX座標を→に移動 scaleは微調整`
+      <path d="M000 100 L750 100" stroke-width="60" fill="black" stroke="black"/>
+    </g>
+
+  </g>
+
+</svg>

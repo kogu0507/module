@@ -80,12 +80,14 @@ export class CoreProcessor {
    * @returns {Promise<string>} SVG 文字列
    * @throws {Error} MEI 未ロード時
    */
-  async renderSvgFromMei(mei, { page = 1, measureRange = 'start-end' } = {}) {
+  async renderSvgFromMei(mei, { page = 1, measureRange = '' } = {}) {
     // MEI データを保存しロード
     this.#meiData = mei;
     this.#toolkit.loadData(mei);
     // 小節範囲を適用
-    await this.#applyMeasureRange(measureRange);
+    if (measureRange) {
+      await this.#applyMeasureRange(measureRange);
+    }
     // SVG を返す
     return this.#toolkit.renderToSVG(page);
   }
@@ -110,11 +112,13 @@ export class CoreProcessor {
    * @returns {Promise<string>} SVG 文字列
    * @throws {Error} MEI 未ロード時
    */
-  async renderCurrentSvg({ page = 1, measureRange = 'start-end' } = {}) {
+  async renderCurrentSvg({ page = 1, measureRange = '' } = {}) {
     if (!this.#meiData) {
       throw new Error('MEI データがロードされていません。');
     }
-    await this.#applyMeasureRange(measureRange);
+    if (measureRange) {
+      await this.#applyMeasureRange(measureRange);
+    }
     return this.#toolkit.renderToSVG(page);
   }
 
