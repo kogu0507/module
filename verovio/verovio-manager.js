@@ -62,9 +62,9 @@ export class VerovioManager {
    * @param {string} targetId    - 表示先要素の ID
    * @param {object} [options]
    * @param {number} [options.page=1]
-   * @param {string} [options.measureRange='start-end']
+   * @param {string} [options.measureRange='']
    */
-  async displaySvgFromUrl(meiUrl, targetId, { page = 1, measureRange = 'start-end' } = {}) {
+  async displaySvgFromUrl(meiUrl, targetId, { page = 1, measureRange = '' } = {}) {
     this._ensureInit();
     this.#ui.showLoading(targetId);
     try {
@@ -106,13 +106,13 @@ export class VerovioManager {
    * @param {number} semitones
    * @param {object} [options]
    * @param {number} [options.page=1]
-   * @param {string} [options.measureRange='start-end']
+   * @param {string} [options.measureRange='']
    */
   async displayTransposedSvgFromUrl(
     meiUrl,
     targetId,
     semitones,
-    { page = 1, measureRange = 'start-end' } = {}
+    { page = 1, measureRange = '' } = {}
   ) {
     this._ensureInit();
     this.#ui.showLoading(targetId);
