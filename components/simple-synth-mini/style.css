@@ -1,0 +1,125 @@
+/* style.css */
+
+/* -------------------------------------------------- */
+/* SSM: Simple Synth Mini コンポーネント用スタイル     */
+/* -------------------------------------------------- */
+
+/* メインコンテナ */
+.ssm-simple-synth-mini {
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 700px;
+}
+
+/* SVG キーボード */
+.ssm-simple-synth-mini svg {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* キー共通 */
+.ssm-simple-synth-mini .key {
+    cursor: pointer;
+    transition: fill 0.1s ease-out, transform 0.05s ease-out;
+    transform-origin: bottom;
+}
+
+/* 白鍵 */
+.ssm-simple-synth-mini .white-key {
+    fill: #fff;
+    stroke: #333;
+    stroke-width: 1;
+}
+
+/* 黒鍵 */
+.ssm-simple-synth-mini .black-key {
+    fill: #333;
+    stroke: #111;
+    stroke-width: 1;
+}
+
+/* 押下中 */
+.ssm-simple-synth-mini .key.active {
+    filter: brightness(85%);
+    transform: scaleY(0.98);
+}
+
+/* 音名ラベル */
+.ssm-simple-synth-mini .note-label {
+    font-size: 10px;
+    fill: #555;
+    text-anchor: middle;
+    pointer-events: none;
+}
+
+/* 黒鍵用ラベル */
+.ssm-simple-synth-mini .black-key-label {
+    font-size: 8px;
+    fill: #eee;
+}
+
+/* ラベル非表示 */
+.ssm-simple-synth-mini.ssm-no-labels .note-label {
+    display: none;
+}
+
+/* -------------------------------------------------- */
+/* ボリュームコントロールスタイル                   */
+/* -------------------------------------------------- */
+.ssm-volume-control {
+    width: 100%;
+    max-width: 250px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 5px;
+}
+
+.ssm-volume-control label {
+    font-size: 0.85rem;
+    color: #555;
+    white-space: nowrap;
+}
+
+.ssm-volume-control input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    background: #ddd;
+    border-radius: 3px;
+    outline: none;
+    opacity: 0.7;
+    transition: opacity .2s;
+}
+
+.ssm-volume-control input[type="range"]:hover {
+    opacity: 1;
+}
+
+.ssm-volume-control input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #007bff;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.ssm-volume-control input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #007bff;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}

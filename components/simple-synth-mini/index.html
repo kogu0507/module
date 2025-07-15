@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <!-- モバイルでの表示に対応 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Synth Mini デモ</title>
+    <!-- Interフォントの読み込み -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- コンポーネント共通スタイル -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- デモ用／詳細パネル用の追加スタイル -->
+    <style>
+        /* 簡易パネル（設定パネルとも共通に使えるベース） */
+        .settings-panel,
+        .ssm-settings-panel {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            padding: 12px;
+            margin-top: 10px;
+            max-width: 700px;
+            width: 100%;
+        }
+
+        .settings-panel label,
+        .ssm-settings-panel label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: #333;
+        }
+
+        .ssm-settings-panel .label-text {
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+
+        .ssm-settings-panel .ssm-setting-input {
+            flex-grow: 1;
+        }
+
+        .ssm-settings-panel select,
+        .ssm-settings-panel input[type="number"],
+        .ssm-settings-panel input[type="range"] {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 4px 6px;
+            background: #f9f9f9;
+        }
+
+        .ssm-settings-panel input[type="checkbox"] {
+            transform: scale(1.2);
+            margin-left: 4px;
+        }
+
+
+        /* ───────────────────────────────────────── */
+        /* イベントログエリア                       */
+        /* ───────────────────────────────────────── */
+        #event-log {
+            width: 100%;
+            max-width: 700px;
+            height: 150px;
+            overflow-y: auto;
+            background: #f9f9f9;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        /* ログ行ごとに少し間隔を */
+        #event-log>div {
+            margin-bottom: 2px;
+        }
+    </style>
+
+
+</head>
+
+<body>
+    <!-- 1つ目のシンセ -->
+    <section class="ssm-demo-section">
+        <h4>Demo 1: C4 から始まる 1 オクターブ / サイン波 / スライダーあり / ラベル表示</h4>
+        <div class="ssm-simple-synth-mini" data-volume-slider="true" data-octaves="1" data-start-note="C4"
+            data-sound-enabled="true" data-instrument="sine" data-show-note-labels="true">
+        </div>
+    </section>
+
+    <!-- 2つ目のシンセ -->
+    <section class="ssm-demo-section">
+        <h4>Demo 2: C5 から始まる 1 オクターブ / 三角波 / ミュート（音なし） / スライダーなし / ラベル非表示</h4>
+        <div class="ssm-simple-synth-mini" data-volume-slider="false" data-octaves="1" data-start-note="C5"
+            data-sound-enabled="false" data-instrument="triangle" data-show-note-labels="false">
+        </div>
+    </section>
+
+    <!-- 3つ目のシンセ -->
+    <section class="ssm-demo-section">
+        <h4>Demo 3: F3 から始まる 2 オクターブ / ノコギリ波 / スライダーあり / ラベル表示</h4>
+        <div class="ssm-simple-synth-mini" id="ssm-synth-third" data-volume-slider="true" data-octaves="2"
+            data-start-note="F3" data-sound-enabled="true" data-instrument="sawtooth" data-show-note-labels="true">
+        </div>
+    </section>
+    <section class="ssm-demo-section">
+        <h4>Event Log</h4>
+        <div id="event-log"></div>
+    </section>
+
+
+    <!-- ──────────────────────────────────────────────── -->
+    <!-- 3つ目シンセ専用：詳細設定パネル                 -->
+    <!-- ──────────────────────────────────────────────── -->
+    <div class="ssm-settings-panel" data-target-id="ssm-synth-third">
+        <h3>Synth 3 設定パネル (F3 Sawtooth)</h3>
+
+        <!-- 音量 -->
+        <label>
+            <span class="label-text">🔊 音量</span>
+            <input type="range" class="ssm-setting-input" id="third-volume" min="0" max="1" step="0.01" value="0.5">
+        </label>
+
+        <!-- 波形（音色） -->
+        <label>
+            <span class="label-text">🎛️ 音色</span>
+            <select class="ssm-setting-input" id="third-instrument">
+                <option value="sine">サイン波 (sine)</option>
+                <option value="square">矩形波 (square)</option>
+                <option value="sawtooth" selected>ノコギリ波 (sawtooth)</option>
+                <option value="triangle">三角波 (triangle)</option>
+            </select>
+        </label>
+
+        <!-- 開始ノート -->
+        <label>
+            <span class="label-text">🎹 開始ノート（トランスポーズ）</span>
+            <select class="ssm-setting-input" id="third-start-note">
+                <!-- 1オクターブ分だけ例示 -->
+                <option>F2</option>
+                <option>F#2</option>
+                <option>G2</option>
+                <option>G#2</option>
+                <option>A2</option>
+                <option>A#2</option>
+                <option>B2</option>
+                <option selected>C3</option>
+                <option>F3</option>
+                <option>F#3</option>
+                <option>G3</option>
+                <!-- 必要に応じて増やしてください -->
+            </select>
+        </label>
+
+        <!-- オクターブ数 -->
+        <label>
+            <span class="label-text">🔢 オクターブ数</span>
+            <input type="number" class="ssm-setting-input" id="third-octaves" min="1" max="4" value="2">
+        </label>
+
+        <!-- 音名ラベルの表示 -->
+        <label>
+            <span class="label-text">🏷️ 音名ラベル</span>
+            <input type="checkbox" class="ssm-setting-input" id="third-show-labels" checked>
+        </label>
+
+        <!-- サウンドのオン／オフ -->
+        <label>
+            <span class="label-text">🔈 サウンド有効</span>
+            <input type="checkbox" class="ssm-setting-input" id="third-sound-enabled" checked>
+        </label>
+    </div>
+
+
+    <!-- コンポーネント本体のスクリプト -->
+    
+    <script type="module" defer>
+        import { SimpleSynthMini } from './script.js';
+
+        /** ページ読み込み後に全インスタンスを初期化 */
+        document.addEventListener('DOMContentLoaded', () => {
+            // 全シンセコンポーネントを初期化
+            document.querySelectorAll('.ssm-simple-synth-mini').forEach(el => {
+                if (!el.id) el.id = `ssm-${Math.random().toString(36).slice(2)}`;
+                el._synthInstance = new SimpleSynthMini(el);
+            });
+
+            // 3つ目シンセ専用パネル連携
+            const panel = document.querySelector('.ssm-settings-panel[data-target-id="ssm-synth-third"]');
+            if (panel) {
+                const targetId = panel.dataset.targetId;
+                const targetEl = document.getElementById(targetId);
+                const synth = targetEl?._synthInstance;
+
+                // 音量スライダー：即時反映
+                const volCtrl = panel.querySelector('#third-volume');
+                if (volCtrl && synth) {
+                    volCtrl.value = synth.gainNode?.gain.value ?? 0.5;
+                    volCtrl.addEventListener('input', e => synth.updateVolume(parseFloat(e.target.value)));
+                }
+
+                // その他設定項目：dataset 更新＋再描画
+                const bind = (selector, dataAttr, getter) => {
+                    const ctrl = panel.querySelector(selector);
+                    if (!ctrl || !synth) return;
+                    // 初期値同期
+                    if (ctrl.tagName === 'SELECT' || ctrl.type === 'number') ctrl.value = targetEl.dataset[dataAttr];
+                    if (ctrl.type === 'checkbox') ctrl.checked = targetEl.dataset[dataAttr] === 'true';
+
+                    const apply = () => {
+                        targetEl.dataset[dataAttr] = getter(ctrl);
+                        synth.updateSettings();
+                    };
+                    ctrl.addEventListener('change', apply);
+                };
+
+                bind('#third-instrument', 'instrument', c => c.value);
+                bind('#third-start-note', 'startNote', c => c.value);
+                bind('#third-octaves', 'octaves', c => c.value);
+                bind('#third-show-labels', 'showNoteLabels', c => c.checked);
+                bind('#third-sound-enabled', 'soundEnabled', c => c.checked);
+            }
+
+            // ここからログ表示の仕組み
+            const logArea = document.getElementById('event-log');
+            if (logArea) {
+                // 新しいログ行を追加するヘルパー
+                const appendLog = msg => {
+                    const line = document.createElement('div');
+                    const time = new Date().toLocaleTimeString();
+                    line.textContent = `[${time}] ${msg}`;
+                    logArea.prepend(line);
+                    // 最大20行だけ保つ
+                    if (logArea.children.length > 20) {
+                        logArea.removeChild(logArea.lastChild);
+                    }
+                };
+
+                // すべての synth コンポーネントに対してリスナ登録
+                document.querySelectorAll('.ssm-simple-synth-mini').forEach(el => {
+                    el.addEventListener('ssm-key-down', e => {
+                        appendLog(`KeyDown: ${e.detail.note} (${e.detail.frequency.toFixed(1)}Hz)`);
+                    });
+                    el.addEventListener('ssm-key-up', e => {
+                        appendLog(`KeyUp:   ${e.detail.note}`);
+                    });
+                });
+            }
+        });
+
+    </script>
+</body>
+
+</html>
