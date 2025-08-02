@@ -1,0 +1,236 @@
+{
+  "translations": {
+    "melody dictation": {
+      "jp": "旋律聴音",
+      "en": "Melody Dictation",
+      "de": "Melodiediktat"
+    },
+    "rhythm dictation": {
+      "jp": "リズム聴音",
+      "en": "Rhythm Dictation",
+      "de": "Rhythmusdiktat"
+    },
+    "harmony dictation": {
+      "jp": "和声聴音",
+      "en": "Harmony Dictation",
+      "de": "Harmoniediktat"
+    },
+    "chord type dictation": {
+      "jp": "コードタイプ聴音",
+      "en": "Chord Type Dictation",
+      "de": "Akkordtypen-Diktat"
+    },
+    "Cb major": {
+      "jp": "変ハ長調",
+      "en": "Cb Major",
+      "de": "Ces-Dur"
+    },
+    "Ab minor": {
+      "jp": "変イ短調",
+      "en": "Ab Minor",
+      "de": "as-Moll"
+    },
+    "Gb major": {
+      "jp": "変ト長調",
+      "en": "Gb Major",
+      "de": "Ges-Dur"
+    },
+    "Eb minor": {
+      "jp": "変ホ短調",
+      "en": "Eb Minor",
+      "de": "es-Moll"
+    },
+    "Db major": {
+      "jp": "変ニ長調",
+      "en": "Db Major",
+      "de": "Des-Dur"
+    },
+    "Bb minor": {
+      "jp": "変ロ短調",
+      "en": "Bb Minor",
+      "de": "b-Moll"
+    },
+    "Ab major": {
+      "jp": "変イ長調",
+      "en": "Ab Major",
+      "de": "As-Dur"
+    },
+    "F minor": {
+      "jp": "ヘ短調",
+      "en": "F Minor",
+      "de": "f-Moll"
+    },
+    "Eb major": {
+      "jp": "変ホ長調",
+      "en": "Eb Major",
+      "de": "Es-Dur"
+    },
+    "C minor": {
+      "jp": "ハ短調",
+      "en": "C Minor",
+      "de": "c-Moll"
+    },
+    "Bb major": {
+      "jp": "変ロ長調",
+      "en": "Bb Major",
+      "de": "B-Dur"
+    },
+    "G minor": {
+      "jp": "ト短調",
+      "en": "G Minor",
+      "de": "g-Moll"
+    },
+    "F major": {
+      "jp": "ヘ長調",
+      "en": "F Major",
+      "de": "F-Dur"
+    },
+    "D minor": {
+      "jp": "ニ短調",
+      "en": "D Minor",
+      "de": "d-Moll"
+    },
+    "C major": {
+      "jp": "ハ長調",
+      "en": "C Major",
+      "de": "C-Dur"
+    },
+    "A minor": {
+      "jp": "イ短調",
+      "en": "A Minor",
+      "de": "a-Moll"
+    },
+    "G major": {
+      "jp": "ト長調",
+      "en": "G Major",
+      "de": "G-Dur"
+    },
+    "E minor": {
+      "jp": "ホ短調",
+      "en": "E Minor",
+      "de": "e-Moll"
+    },
+    "D major": {
+      "jp": "ニ長調",
+      "en": "D Major",
+      "de": "D-Dur"
+    },
+    "B minor": {
+      "jp": "ロ短調",
+      "en": "B Minor",
+      "de": "h-Moll"
+    },
+    "A major": {
+      "jp": "イ長調",
+      "en": "A Major",
+      "de": "A-Dur"
+    },
+    "F# minor": {
+      "jp": "嬰ヘ短調",
+      "en": "F# Minor",
+      "de": "fis-Moll"
+    },
+    "E major": {
+      "jp": "ホ長調",
+      "en": "E Major",
+      "de": "E-Dur"
+    },
+    "C# minor": {
+      "jp": "嬰ハ短調",
+      "en": "C# Minor",
+      "de": "cis-Moll"
+    },
+    "B major": {
+      "jp": "ロ長調",
+      "en": "B Major",
+      "de": "H-Dur"
+    },
+    "G# minor": {
+      "jp": "嬰ト短調",
+      "en": "G# Minor",
+      "de": "gis-Moll"
+    },
+    "F# major": {
+      "jp": "嬰ヘ長調",
+      "en": "F# Major",
+      "de": "Fis-Dur"
+    },
+    "D# minor": {
+      "jp": "嬰ニ短調",
+      "en": "D# Minor",
+      "de": "dis-Moll"
+    },
+    "C# major": {
+      "jp": "嬰ハ長調",
+      "en": "C# Major",
+      "de": "Cis-Dur"
+    },
+    "A# minor": {
+      "jp": "嬰イ短調",
+      "en": "A# Minor",
+      "de": "ais-Moll"
+    },
+    "2/4": {
+      "jp": "4分の2拍子",
+      "en": "2/4 Meter",
+      "de": "2/4-Takt"
+    },
+    "3/4": {
+      "jp": "4分の3拍子",
+      "en": "3/4 Meter",
+      "de": "3/4-Takt"
+    },
+    "4/4": {
+      "jp": "4分の4拍子",
+      "en": "4/4 Meter",
+      "de": "4/4-Takt"
+    },
+    "2/2": {
+      "jp": "2分の2拍子",
+      "en": "2/2 Meter",
+      "de": "2/2-Takt"
+    },
+    "3/8": {
+      "jp": "8分の3拍子",
+      "en": "3/8 Meter",
+      "de": "3/8-Takt"
+    },
+    "6/8": {
+      "jp": "8分の6拍子",
+      "en": "6/8 Meter",
+      "de": "6/8-Takt"
+    },
+    "9/8": {
+      "jp": "8分の9拍子",
+      "en": "9/8 Meter",
+      "de": "9/8-Takt"
+    },
+    "12/8": {
+      "jp": "8分の12拍子",
+      "en": "12/8 Meter",
+      "de": "12/8-Takt"
+    },
+    "5/4": {
+      "jp": "4分の5拍子",
+      "en": "5/4 Meter",
+      "de": "5/4-Takt"
+    },
+    "7/8": {
+      "jp": "8分の7拍子",
+      "en": "7/8 Meter",
+      "de": "7/8-Takt"
+    },
+    "8 measures": {
+      "jp": "8小節",
+      "en": "8 measures",
+      "de": "8 Takte"
+    },
+    "tie": {
+      "jp": "タイ",
+      "en": "Tie",
+      "de": "Bindebogen"
+    }
+  }
+}
+
+

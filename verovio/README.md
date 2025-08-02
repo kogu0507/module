@@ -77,14 +77,22 @@ module/
 
 ### verovio-manager.min.js
 
-* **責務**: 上記モジュールを統合し、簡単に利用できる高レベル API を提供。
+* **責務**: 上記モジュールを統合し、簡単に利用できる高レベル API を提供。  
 * **主なメソッド**:
-
-  * `initialize()` → `Promise<void>`
-  * `setRenderOptions(options)`
-  * `displaySvgFromUrl(meiUrl, elementId, options)`
-  * `displayTransposedSvgFromUrl(meiUrl, elementId, semitones, options)`
-  * `getMidiFromUrl(meiUrl, options)`
+  - `initialize()` → `Promise<void>`
+  - `setRenderOptions(options)`
+  - **SVG 描画（URL 版）**  
+    - `displaySvgFromUrl(meiUrl, elementId, options)`
+  - **SVG 描画（MEI 文字列版）** ← 追加  
+    - `displaySvgFromMei(meiString, elementId, options)`
+  - **移調表示（URL 版）**  
+    - `displayTransposedSvgFromUrl(meiUrl, elementId, semitones, options)`
+  - **移調表示（MEI 文字列版）** ← 追加  
+    - `displayTransposedSvgFromMei(meiString, elementId, semitones, options)`
+  - **MIDI 取得（URL 版）**  
+    - `getMidiFromUrl(meiUrl, options)`
+  - **MIDI 取得（MEI 文字列版）** ← 追加  
+    - `getMidiFromMei(meiString, options)`
 
 ---
 
@@ -99,25 +107,44 @@ import { defaultOptions } from './module/verovio/render-options.js';
   await manager.initialize();
   manager.setRenderOptions(defaultOptions);
 
-  // MEI → SVG 表示
+  // — URL 版: score.mei をフェッチして SVG 表示
   await manager.displaySvgFromUrl(
     'path/to/score.mei',
     'score-container',
     { page: 1, measureRange: '1-5' }
   );
 
-  // 移調表示 (半音 +2)
+  // — MEI 文字列版: あらかじめ文字列を読み込んでから直接 SVG 表示
+  const meiText = await fetch('path/to/score.mei').then(r => r.text());
+  await manager.displaySvgFromMei(
+    meiText,
+    'score-container',
+    { page: 2, measureRange: '6-10' }
+  );
+
+  // — 移調表示（URL 版 +2半音）
   await manager.displayTransposedSvgFromUrl(
     'path/to/score.mei',
     'score-container',
     2,
-    { page: 1, measureRange: 'start-end' }
+    { page: 1 }
   );
 
-  // MIDI データ取得
-  const midiBuffer = await manager.getMidiFromUrl('path/to/score.mei');
-  // Blob → ダウンロードや再生に利用
+  // — 移調表示（MEI 文字列版 +2半音）
+  await manager.displayTransposedSvgFromMei(
+    meiText,
+    'score-container',
+    2,
+    { page: 1 }
+  );
+
+  // — MIDI 取得（URL 版）
+  const midiBuffer1 = await manager.getMidiFromUrl('path/to/score.mei');
+
+  // — MIDI 取得（MEI 文字列版）
+  const midiBuffer2 = await manager.getMidiFromMei(meiText);
 })();
+
 ```
 
 ```html
@@ -129,7 +156,10 @@ import { defaultOptions } from './module/verovio/render-options.js';
     (async () => {
       const manager = new VerovioManager();
       await manager.initialize();
-      await manager.displaySvgFromUrl('path/to/sample.mei', 'score-container');
+
+      // MEI 文字列版を使用するサンプル
+      const meiText = await fetch('sample.mei').then(r => r.text());
+      await manager.displaySvgFromMei(meiText, 'score-container');
     })();
   </script>
 </head>
@@ -137,6 +167,7 @@ import { defaultOptions } from './module/verovio/render-options.js';
   <div id="score-container"></div>
 </body>
 </html>
+
 ```
 
 ---

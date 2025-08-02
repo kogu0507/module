@@ -1,36 +1,47 @@
 <!-- dev-module/examples/verovio-manager-test.html -->
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>VerovioManager テスト</title>
   <style>
-    body {
-      font-family: sans-serif;
-      padding: 1em;
-    }
-
+    body { font-family: sans-serif; padding: 1em; }
     #container {
       border: 1px solid #ccc;
       padding: 1em;
-      min-height: 200px;
+      min-height: 300px;
       overflow-x: auto;
+      margin-bottom: 1em;
     }
-
-    button {
-      margin-right: 0.5em;
-    }
+    button { margin: 0.2em; }
   </style>
 </head>
-
 <body>
   <h1>VerovioManager 統合テスト</h1>
   <div id="container">ここに楽譜が表示されます</div>
-  <div style="margin-top:1em;">
-    <button id="btnLoad">表示</button>
-    <button id="btnTranspose">移調(+2)</button>
+
+  <!-- 操作用ボタン群 -->
+  <div>
+    <!-- レンダーオプション切替 -->
+    <button id="btnDefault">表示: Default</button>
+    <button id="btnHighRes">表示: HighRes</button>
+    <button id="btnMobile">表示: Mobile</button>
+    <button id="btnPrint">表示: Print</button>
+  </div>
+  <div>
+    <!-- MEI 文字列版表示 -->
+    <button id="btnFromMeiString">表示: MEI文字列版</button>
+  </div>
+  <div>
+    <!-- 移調 -->
+    <button id="btnTransposeUrl">移調(+2): URL版</button>
+    <button id="btnTransposeMei">移調(+2): 文字列版</button>
+  </div>
+  <div>
+    <!-- MIDI取得 -->
+    <button id="btnGetMidiUrl">MIDI取得: URL版</button>
+    <button id="btnGetMidiMei">MIDI取得: 文字列版</button>
   </div>
 
   <script type="module">
@@ -42,28 +53,94 @@
       printOptions
     } from '../../module/verovio/render-options.js';
 
-    const manager = new VerovioManager();
+    // HTML 要素／定数
     const containerId = 'container';
     const meiUrl = './sample.mei';
 
-    // 初期化
-    manager.initialize().catch(err => console.error(err));
+    // VerovioManager 初期化
+    const manager = new VerovioManager();
+    await manager.initialize();
 
+    // ボタン要素取得
+    const btnDefault      = document.getElementById('btnDefault');
+    const btnHighRes      = document.getElementById('btnHighRes');
+    const btnMobile       = document.getElementById('btnMobile');
+    const btnPrint        = document.getElementById('btnPrint');
+    const btnFromMeiString= document.getElementById('btnFromMeiString');
+    const btnTransposeUrl = document.getElementById('btnTransposeUrl');
+    const btnTransposeMei = document.getElementById('btnTransposeMei');
+    const btnGetMidiUrl   = document.getElementById('btnGetMidiUrl');
+    const btnGetMidiMei   = document.getElementById('btnGetMidiMei');
 
+    // 共通: MEI をフェッチして文字列を返す
+    async function fetchMei() {
+      const res = await fetch(meiUrl);
+      if (!res.ok) throw new Error(`MEI fetch failed: ${res.status}`);
+      return res.text();
+    }
 
-    document.getElementById('btnLoad').onclick = () => {
-      manager.setRenderOptions(defaultOptions);// optionsを設定
-      manager.displayMeiOnElement(meiUrl, containerId);
+    // SVG 表示（URL版 or 文字列版）
+    btnDefault.onclick = () => {
+      manager.setRenderOptions(defaultOptions);
+      manager.displaySvgFromUrl(meiUrl, containerId, { page:1, measureRange: '' });
     };
-    document.getElementById('btnTranspose').onclick = () => {
-      manager.setRenderOptions(defaultOptions);// optionsを設定
-      // manager.displayTransposedMeiOnElement(meiUrl, containerId, "2"); // 半音２つ↑
-      // manager.displayTransposedMeiOnElement(meiUrl, containerId, "m2"); // 短2度↑
-      // manager.displayTransposedMeiOnElement(meiUrl, containerId, "M2"); // 長2度↑
-      // manager.displayTransposedMeiOnElement(meiUrl, containerId, "P5"); // 完全5度↑
-      manager.displayTransposedMeiOnElement(meiUrl, containerId, "Bb"); // Tonic指定 Bb Major Key
+    btnHighRes.onclick = () => {
+      manager.setRenderOptions(highResOptions);
+      manager.displaySvgFromUrl(meiUrl, containerId, { page:1, measureRange: '' });
+    };
+    btnMobile.onclick = () => {
+      manager.setRenderOptions(mobileOptions);
+      manager.displaySvgFromUrl(meiUrl, containerId, { page:1, measureRange: '' });
+    };
+    btnPrint.onclick = () => {
+      manager.setRenderOptions(printOptions);
+      manager.displaySvgFromUrl(meiUrl, containerId, { page:1, measureRange: '' });
+    };
+
+    btnFromMeiString.onclick = async () => {
+      const mei = await fetchMei();
+      manager.setRenderOptions(defaultOptions);
+      manager.displaySvgFromMei(mei, containerId, { page:1, measureRange: '' });
+    };
+
+    // 移調（+2 半音）
+    btnTransposeUrl.onclick = () => {
+      manager.setRenderOptions(defaultOptions);
+      manager.displayTransposedSvgFromUrl(
+        meiUrl, containerId, 2, { page:1, measureRange: '' }
+      );
+    };
+    btnTransposeMei.onclick = async () => {
+      const mei = await fetchMei();
+      manager.setRenderOptions(defaultOptions);
+      manager.displayTransposedSvgFromMei(
+        mei, containerId, 2, { page:1, measureRange: '' }
+      );
+    };
+
+    // MIDI 取得・ダウンロード
+    btnGetMidiUrl.onclick = async () => {
+      const midiArray = await manager.getMidiFromUrl(meiUrl, {});
+      const blob = new Blob([midiArray], { type: 'audio/midi' });
+      const urlObj = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = urlObj;
+      a.download = 'output_url.mid';
+      a.click();
+      URL.revokeObjectURL(urlObj);
+    };
+
+    btnGetMidiMei.onclick = async () => {
+      const mei = await fetchMei();
+      const midiArray = await manager.getMidiFromMei(mei, {});
+      const blob = new Blob([midiArray], { type: 'audio/midi' });
+      const urlObj = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = urlObj;
+      a.download = 'output_mei.mid';
+      a.click();
+      URL.revokeObjectURL(urlObj);
     };
   </script>
 </body>
-
 </html>

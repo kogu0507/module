@@ -11,19 +11,20 @@ import { Transposer } from './transposer.min.js';
  * 高レベル API を提供します。
  */
 export class VerovioManager {
-  /** @private */
+  /** @private VerovioToolkit インスタンス */
   #toolkit = null;
-  /** @private */
+  /** @private MEI→SVG／MIDI 変換用コア */
   #core = null;
-  /** @private */
+  /** @private SVG 表示・エラー管理UI */
   #ui = null;
-  /** @private */
+  /** @private MEI 移調ユーティリティ */
   #transposer = null;
-  /** @private */
+  /** @private 初期化 Promise のキャッシュ */
   _initPromise = null;
 
   /**
    * Verovio および関連モジュールを初期化します。
+   * ２回目以降は既存の Promise を返します。
    * @returns {Promise<void>}
    */
   async initialize() {
@@ -31,7 +32,9 @@ export class VerovioManager {
       return this._initPromise;
     }
     this._initPromise = (async () => {
+      // Verovio のロード
       this.#toolkit = await loadVerovio();
+      // コア・UI・移調クラスを生成
       this.#core = new CoreProcessor(this.#toolkit);
       this.#ui = new ScoreUIHandler();
       this.#transposer = new Transposer(this.#toolkit);
@@ -40,7 +43,7 @@ export class VerovioManager {
     return this._initPromise;
   }
 
-  /** @private */
+  /** @private 初期化済みかチェック */
   _ensureInit() {
     if (!this.#toolkit) {
       throw new Error('initialize() を先に呼び出してください。');
@@ -57,59 +60,104 @@ export class VerovioManager {
   }
 
   /**
-   * URL から MEI を読み込み、SVG を描画します。
-   * @param {string} meiUrl      - MEI ファイルの URL
-   * @param {string} targetId    - 表示先要素の ID
-   * @param {object} [options]
+   * MEI の URL からテキストを取得します。
+   * @param {string} meiUrl
+   * @returns {Promise<string>}
+   * @private
+   */
+  async _loadMei(meiUrl) {
+    const res = await fetch(meiUrl);
+    if (!res.ok) {
+      throw new Error(`MEI の取得に失敗 (${res.status})`);
+    }
+    return res.text();
+  }
+
+  /**
+   * MEI 文字列から SVG を生成し、画面に表示します。
+   * @param {string} mei            - MEI XML 文字列
+   * @param {string} targetId       - 表示先要素の ID
+   * @param {object} [options]      - オプション
    * @param {number} [options.page=1]
    * @param {string} [options.measureRange='']
    */
-  async displaySvgFromUrl(meiUrl, targetId, { page = 1, measureRange = '' } = {}) {
+  async displaySvgFromMei(
+    mei,
+    targetId,
+    { page = 1, measureRange = '' } = {}
+  ) {
     this._ensureInit();
     this.#ui.showLoading(targetId);
     try {
-      const svg = await this.#core.renderSvgFromUrl(meiUrl, { page, measureRange });
+      // コア処理で SVG を取得
+      const svg = await this.#core.renderSvgFromMei(mei, { page, measureRange });
+      // UI に描画
       this.#ui.displaySvg(svg, targetId);
     } catch (error) {
-      console.error('displaySvgFromUrl error:', error);
+      console.error('displaySvgFromMei error:', error);
       this.#ui.showError('楽譜の表示に失敗しました。', targetId);
       throw error;
     }
   }
 
   /**
-   * URL から MEI を読み込み、MIDI を取得します。
+   * URL から MEI を取得し、そのまま displaySvgFromMei に委譲します。
+   * @param {string} meiUrl
+   * @param {string} targetId
+   * @param {object} [options]
+   */
+  async displaySvgFromUrl(
+    meiUrl,
+    targetId,
+    options = { page: 1, measureRange: '' }
+  ) {
+    // MEI テキストを取得
+    const mei = await this._loadMei(meiUrl);
+    // MEI 文字列版のメソッドに委譲
+    return this.displaySvgFromMei(mei, targetId, options);
+  }
+
+  /**
+   * MEI 文字列から MIDI を生成して返却します。
+   * @param {string} mei
+   * @param {object} [options]
+   * @param {string} [options.measureRange]
+   * @returns {Promise<ArrayBuffer>}
+   */
+  async getMidiFromMei(mei, { measureRange } = {}) {
+    this._ensureInit();
+    if (measureRange) {
+      // 範囲指定ありなら SVG→現在の MIDI を取得
+      await this.#core.renderSvgFromMei(mei, { page: 1, measureRange });
+      return this.#core.renderCurrentMidi();
+    }
+    // 範囲指定なし
+    return this.#core.renderMidiFromMei(mei);
+  }
+
+  /**
+   * URL から MEI を取得し、そのまま getMidiFromMei に委譲します。
    * @param {string} meiUrl
    * @param {object} [options]
    * @param {string} [options.measureRange]
    * @returns {Promise<ArrayBuffer>}
    */
-  async getMidiFromUrl(meiUrl, { measureRange } = {}) {
-    this._ensureInit();
-    if (measureRange) {
-      return this._getMidiRange(meiUrl, measureRange);
-    }
-    return this.#core.renderMidiFromUrl(meiUrl);
-  }
-
-  /** @private */
-  async _getMidiRange(meiUrl, measureRange) {
-    // 範囲指定を適用しつつ MEI を読み込む
-    await this.#core.renderSvgFromUrl(meiUrl, { page: 1, measureRange });
-    return this.#core.renderCurrentMidi();
+  async getMidiFromUrl(meiUrl, options = {}) {
+    const mei = await this._loadMei(meiUrl);
+    return this.getMidiFromMei(mei, options);
   }
 
   /**
-   * URL から MEI を読み込み、指定半音で移調した SVG を描画します。
-   * @param {string} meiUrl
+   * MEI 文字列を移調して SVG を描画します。
+   * @param {string} mei
    * @param {string} targetId
    * @param {number} semitones
    * @param {object} [options]
    * @param {number} [options.page=1]
    * @param {string} [options.measureRange='']
    */
-  async displayTransposedSvgFromUrl(
-    meiUrl,
+  async displayTransposedSvgFromMei(
+    mei,
     targetId,
     semitones,
     { page = 1, measureRange = '' } = {}
@@ -117,16 +165,32 @@ export class VerovioManager {
     this._ensureInit();
     this.#ui.showLoading(targetId);
     try {
-      const res = await fetch(meiUrl);
-      if (!res.ok) throw new Error(`MEI fetch failed: ${res.status}`);
-      const mei = await res.text();
+      // MEI を移調
       const transposed = await this.#transposer.transposeMei(mei, semitones);
+      // 文字列版のレンダリングに委譲
       const svg = await this.#core.renderSvgFromMei(transposed, { page, measureRange });
       this.#ui.displaySvg(svg, targetId);
     } catch (error) {
-      console.error('displayTransposedSvgFromUrl error:', error);
+      console.error('displayTransposedSvgFromMei error:', error);
       this.#ui.showError('移調表示に失敗しました。', targetId);
       throw error;
     }
+  }
+
+  /**
+   * URL から MEI を取得し、移調処理 → SVG 描画を行います。
+   * @param {string} meiUrl
+   * @param {string} targetId
+   * @param {number} semitones
+   * @param {object} [options]
+   */
+  async displayTransposedSvgFromUrl(
+    meiUrl,
+    targetId,
+    semitones,
+    options = { page: 1, measureRange: '' }
+  ) {
+    const mei = await this._loadMei(meiUrl);
+    return this.displayTransposedSvgFromMei(mei, targetId, semitones, options);
   }
 }
