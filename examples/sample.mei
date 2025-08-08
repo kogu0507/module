@@ -17,8 +17,6 @@
                         <staffGrp>
                             <staffDef n="1" clef.shape="G" clef.line="2" lines="5"/>
                         </staffGrp>
-                        <key mode="major" pname="g"/>
-                        <meter count="4" unit="3"/>
                     </scoreDef>
                     <section>
                         <measure n="1">
