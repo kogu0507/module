@@ -1,267 +1,439 @@
-# tonejsディレクトリ README
+# Tonejs ライブラリ
+
+## 概要
+Tone.js を活用したアプリケーションを構築するためのモジュール群です。  
+Verovio から取得した MIDI データの解析・再生・楽器管理などの基盤機能を、独立したモジュールとして提供します。  
+機能ごとの再利用性と保守性を高め、効率的な開発を可能にします。
+
+---
+
+## 今回の目標（v1）
+- **Verovio側で生成されたMIDIデータをTone.jsで再生する**ことに専念
+- 楽器はシンセまたはサンプラーのいずれかを選択
+- AudioContextの初期化や音量・テンポなど基本的な制御を提供
+
+## 次回以降に回す予定
+- 小節範囲のリアルタイム制御（Tone.js側でのスケジューリング）
+- プレイリストのシーケンス管理
+- タッチキーボード・和音再生・ベル再生などのインタラクティブ機能
+
+---
 
 ## ディレクトリ構造
+```
+
 tonejs/
-  samples/
-    loader-setup-synth-sampler-test.html
-    tempo-test.html
-    core-processor-test.html
-    play-range-test.html
-
-
-  core/
-    loader.js         # script type="module"を挿入してTone.jsをロード
-    instrument.js     # 楽器情報を管理（synth.js, sampler.jsを保持、インスタンスを返すのかな？）
-    synth.js          # シンセ情報を管理
-    sampler.js        # サンプラー情報を管理
-    setup.js          # Tone.start()など？
-    volume.js         # 複数の独立した音量調整（声部ごとの音量など）
-    tempo.js          # 現在のテンポ値を保持・管理
-    playlist-timer.js # 再生とインターバルの制御ロジック
-    play-range.js    # MIDIデータの小節と再生時間の変換ロジック
-
-  processor/
-    core-processor.js # MIDI → JSObject
-    tonejs-midi-loader.js
-
-  player/
-    midi-player.js    # midiから`play-range.js`を使って再生を実行
-    jsobject-player.js
-    touch-keyboard.js
-    bell-player.js    # 終了を知らせるベルなど
-    chord-player.js   # 主和音再生や楽典のサンプル音など
-  manager/
-    tonejs-manager.js # `playlist-timer.js`を呼び出して全体を制御
-
-
-
-## 各コード
-AIの方へ：必要な場合はコピペしてくるのでお知らせください。
-
-
-### `tonejs/core/loader.js` と `module/library-loader.mjs` の要約
-
-#### 概要
-`tonejs/core/loader.js` は、`module/library-loader.mjs` の汎用的な機能を利用して、Webアプリケーションに**** **Tone.js** ライブラリを動的にロードする専用モジュールです。
-
-- **`module/library-loader.mjs`**: `<script>` タグを動的に作成して外部ライブラリをロードするためのユーティリティモジュールです。同じライブラリが複数回ロードされるのを防ぐためのキャッシュ機能を持っています。
-- **`tonejs/core/loader.js`**: `library-loader` を利用して **Tone.js (v15.1.22)** を特定のURLからロードします。これにより、他のモジュールは `loadToneJs()` を呼び出すだけで Tone.js の読み込みを簡単に行うことができます。
-
-#### 公開されている関数
-
-`tonejs/core/loader.js` からは以下の関数がエクスポートされています。
-
-- **`loadToneJs()`**
-  - **目的**: Tone.js ライブラリを非同期でロードします。
-  - **引数**: なし。
-  - **戻り値**: 読み込みが完了したときに解決する **`Promise<void>`**。
-  - **注意**: この関数は、他のTone.js関連モジュールを使用する前に呼び出す必要があります。
-
-#### 補足
-
-`library-loader.mjs` 自体は汎用的なモジュールとして設計されており、**Tone.js 以外のライブラリのロードにも再利用可能**です。`loadedScripts` という内部オブジェクトを使用して、一度読み込まれたスクリプトのURLをキャッシュしています。これにより、同じスクリプトを複数回ロードしようとしても、初回のみ実行される効率的な設計になっています。
-
----
-
-
-
-### `tonejs/core/setup.js` の要約
-
-
-#### 概要
-
-`tonejs/core/setup.js` は、**** Web Audio APIの基盤となる **AudioContext** を初期化・管理するモジュールです。
-
-Webブラウザでは、ユーザーの操作（クリックなど）がないとオーディオの再生を開始できないため、このモジュールはユーザーのインタラクションをトリガーとして `Tone.start()` を呼び出す役割を担います。
-
-#### 公開されている関数
-
-- **`initToneAudio()`**
-  - **目的**: Tone.jsのAudioContextを初期化し、オーディオの再生を可能にします。この関数は一度だけ実行され、2回目以降の呼び出しは無視されます。
-  - **引数**: なし。
-  - **戻り値**: オーディオコンテキストが開始されると解決する **`Promise<void>`**。
-  - **注意**: この関数は、**ユーザーのクリックイベント**などの操作内で呼び出す必要があります。また、このモジュールを使用する前に `loader.js` で **Tone.js** をロードしておく必要があります。
-
-#### 内部変数
-
-- **`_audioStarted`**
-  - **目的**: AudioContextがすでに起動済みかどうかを追跡するためのフラグです。これにより、`initToneAudio()` が複数回呼び出されても、初期化処理が重複して実行されるのを防ぎます。
-  - **初期値**: `false`
-
-これで、このモジュールの役割をAIに簡潔に伝えることができます。何か他のモジュールの要約が必要でしたら、お知らせください。
-
----
-
-承知いたしました。いただいたコードを要約し、AIへの引き継ぎに役立つようにまとめます。
-
----
-
-### `tonejs/core/synth.js` の要約
-#### 概要
-
-`tonejs/core/synth.js` は、**Tone.js** の **シンセサイザー** (`Tone.Synth`) のインスタンス作成と、それを使った音の再生に関する機能を提供するモジュールです。
-
-このモジュールは、基本的なシンセサイザーの作成から、特定の音を鳴らす関数までを提供し、今後さまざまな種類のシンセサイザーを扱うための基盤となります。
-
----
-
-#### 公開されている関数
-
-- **`createDefaultSynth()`**
-  - **目的**: デフォルト設定の `Tone.Synth` インスタンスを作成し、メインの出力先に接続します。
-  - **引数**: なし。
-  - **戻り値**: 設定済みの `Tone.Synth` インスタンス。
-  - **注意**: Tone.jsがグローバルスコープにロードされていない場合はエラーをスローします。
-
-- **`playSynthNote(synth, note, duration = "8n")`**
-  - **目的**: 指定されたシンセサイザーを使って、特定の音を再生します。
-  - **引数**:
-    - `synth` (`Tone.Synth`): 音を鳴らすシンセサイザーのインスタンス。
-    - `note` (`string`): 再生する音の音名（例: `"C4"`, `"A#3"`）。
-    - `duration` (`string`, オプション): 音の長さ（例: `"8n"`）。デフォルトは `"8n"`。
-  - **戻り値**: なし。
-
-- **`playSynthTestSound(synth)`**
-  - **目的**: テストやデバッグのために、C4の音を短く鳴らします。これは `playSynthNote` のラッパー関数です。
-  - **引数**:
-    - `synth` (`Tone.Synth`): 音を鳴らすシンセサイザーのインスタンス。
-  - **戻り値**: なし。
-
----
-
-#### 将来的な拡張性
-
-コード内のコメントにあるように、このモジュールは将来的に `FMSynth` や `AMSynth` といった、他の種類のシンセサイザーを作成する関数を追加するための準備がされています。
-
----
-
-
-
-
-承知いたしました。いただいたコードを要約し、AIへの引き継ぎに役立つようにまとめます。
-
----
-
-### `tonejs/core/sampler.js` の要約
-
-#### 概要
-
-`tonejs/core/sampler.js` は、**Tone.js** の **サンプラー** (`Tone.Sampler`) を管理するモジュールです。このモジュールは、**サラマンダーグランドピアノ**のサンプルをロードし、それを使って音を再生するための関数を提供します。シンセサイザーと異なり、サンプラーは録音された実際の音源を使用するため、よりリアルな楽器の音を出すことができます。
-
-
-#### 公開されている関数
-
-- **`createSalamanderSampler()`**
-  - **目的**: サラマンダーグランドピアノの音源を非同期でロードし、**`Tone.Sampler`** のインスタンスを作成します。サンプルの読み込みには時間がかかるため、`Promise` を返します。
-  - **引数**: なし。
-  - **戻り値**: サンプルのロードが完了した **`Tone.Sampler`** インスタンスを解決する `Promise`。
-  - **注意**: この関数は、Tone.jsがロードされていない場合はエラーをスローします。
-
-- **`playSamplerNote(sampler, note, duration = "8n")`**
-  - **目的**: 指定されたサンプラーを使って、特定の音を再生します。
-  - **引数**:
-    - `sampler` (`Tone.Sampler`): 音を鳴らすサンプラーのインスタンス。
-    - `note` (`string`): 再生する音の音名（例: `"C4"`, `"A#3"`）。
-    - `duration` (`string`, オプション): 音の長さ。デフォルトは `"8n"`。
-  - **戻り値**: なし。
-
-- **`playSamplerTestSound(sampler)`**
-  - **目的**: テストやデバッグ用に、C4の音をサンプラーで鳴らします。これは `playSamplerNote` のラッパー関数です。
-  - **引数**:
-    - `sampler` (`Tone.Sampler`): 音を鳴らすサンプラーのインスタンス。
-  - **戻り値**: なし。
-
----
-
-
-
-### `tonejs/core/tempo.js` の要約
-
-
-#### 概要
-
-`tonejs/core/tempo.js` は、**Tone.js** の **トランスポート** (`Tone.Transport`) を制御し、プロジェクト全体の時間管理を担うモジュールです。
-
-トランスポートは、音楽の再生・停止やテンポ（BPM）を管理する中核的な機能です。このモジュールは、それを操作するためのシンプルで一貫したインターフェースを提供します。
-
-
-#### 公開されている関数
-
-- **`initTempo(bpm)`**
-  - **目的**: プロジェクトのテンポを **BPM（Beats Per Minute）** で設定します。
-  - **引数**:
-    - `bpm` (`number`): 設定するBPM値。
-  - **戻り値**: なし。
-
-- **`startTempo()`**
-  - **目的**: トランスポートを再生し、音楽やシーケンスの再生を開始します。
-  - **引数**: なし。
-  - **戻り値**: なし。
-
-- **`stopTempo()`**
-  - **目的**: トランスポートを停止し、再生中の音楽やシーケンスを止めます。
-  - **引数**: なし。
-  - **戻り値**: なし。
-
-- **`getBpm()`**
-  - **目的**: 現在設定されているBPM値を取得します。
-  - **引数**: なし。
-  - **戻り値**: 現在のBPMを表す `number`。
-
----
-
-#### 注意事項
-
-- これらの関数を使用する前に、`loader.js` を使って **Tone.js** を事前にロードしておく必要があります。
-- このモジュールは、`Tone.Transport` を直接操作するためのラッパーとして機能します。
-
-
-
-
-### `tonejs/core/volume.js`
-複数の独立した音量調整（声部ごとの音量など）。
-
-**現状：未実装**
-
----
-
-### `tonejs/core/playlist-timer.js`
-再生とインターバルの制御ロジック。
-
-**現状：未実装**
-
----
-
-### `tonejs/core/play-range.js`
-MIDIデータの小節と再生時間の変換ロジック。
-
-**現状：未実装**
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#### 1. MIDIデータの処理ロジックの定義
-
-* **`processor/core-processor.js`**
-    * 目的: MIDIデータをJavaScriptオブジェクトに変換する処理を実装します。この処理が、他のプレイヤーモジュールが利用する音楽データの形式を定義することになります。
-    * 作業内容: MIDIファイルやMIDIデータ（バイナリ、Base64など）を受け取り、音符（ノートオン、ノートオフ）、タイミング、ベロシティなどの情報を抽出し、扱いやすいJavaScriptオブジェクトに変換する関数を実装します。
-
+├── samples/
+│   ├── ...
+│
+├── core/
+│   ├── loader.js          # Tone.js の動的ロード
+│   ├── synth.js           # シンセサイザー機能
+│   ├── sampler.js         # サンプラー機能
+│   ├── setup.js           # AudioContext の初期化
+│   ├── volume.js          # 音量調整 (未実装)
+│   └── tempo.js           # テンポ管理
+│
+├── processor/
+│   ├── core-processor.js  # MIDIデータ解析（@tonejs/midiを使用）テンポ変化は未対応
+│   └── tonejs-midi-loader.js
+│
+├── player/
+│   ├── midi-player.js     # MIDI再生機能
+│   ├── jsobject-player.js # JSオブジェクト再生機能 (未実装)
+│   ├── touch-keyboard.js  # タッチキーボード (未実装)
+│   ├── bell-player.js     # ベル再生 (未実装)
+│   └── chord-player.js    # 和音再生 (未実装)
+│
+└── manager/
+    └── tonejs-manager.js  # 全体制御
+
+```
+
+## メモ
+- getPlayRangeInSecondsFromOne の計算が 分母（拍子の分割）を使わず beatsPerMeasure と BPM のみなら、その旨を記載しておくと誤解が減ります。
+- Salamanderの C1..C7 はだいたい取れますが、CDN都合で稀に404が出ることがあります。onerror ログ済みでOKですが、READMEに「回線/キャッシュ依存で初回遅延あり」と注意書きがあると現場で助かるはず。
+- midi-player.setupMidiPlayer() は initToneAudio() を呼びますが、Tone.js自体のロード（loadToneJs()）は前段で完了している前提。READMEのクイックスタートに 1)loadToneJs() → 2) initToneAudio() → 3) MIDI解析 → 4) プレイヤーsetup の順序を 箇条書きで書いておくと、初心者が迷いません。
+- 将来 *.min.js を用意するなら、CDN（jsDelivr/GH Pages）での想定パスを README末尾に「例：https://cdn.jsdelivr.net/gh/kogu0507/module@<version>/tonejs/core/...」と型を提示しておくと運用が揃います。
+- https://cdn.jsdelivr.net/gh/kogu0507/dev@main/tonejs/core/...(開発用)
+
+
+
+## 開発中のコード一覧
+
+### `tonejs/core/loader.js`と`module/library-loader.js`
+```javascript
+// tonejs/core/loader.js
+import { loadScript } from '../../library-loader.js'; // library-loader.jsへの相対パス
+
+/**
+ * Tone.jsをロードします。
+ * @returns {Promise<void>}
+ */
+export function loadToneJs() {
+    return loadScript('Tone.js', 'https://unpkg.com/tone@15.1.22/build/Tone.js');
+}
+```
+
+```javascript
+// module/library-loader.js
+// —————————————————————————————————————————————————
+// 汎用的に <script> を追加して外部ライブラリをロードするユーティリティ
+// 既にロード済みなら再度読み込まない
+// —————————————————————————————————————————————————
+
+const loadedScripts = {};
+
+/**
+ * 外部スクリプトを動的に追加し、読み込み完了を待ちます。
+ *
+ * @param {string} name  識別用のキー（例: 'Tone.js', 'Verovio'）
+ * @param {string} url   スクリプトのURL
+ * @returns {Promise<void>}
+ */
+export function loadScript(name, url) {
+  // すでに読み込み済みなら即解決
+  if (loadedScripts[name]) {
+    console.log(`[library-loader] ${name} is already loaded.`);
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = url;
+    script.async = true;
+
+    script.onload = () => {
+      console.log(`[library-loader] ${name} loaded from ${url}`);
+      loadedScripts[name] = true;
+      resolve();
+    };
+
+    script.onerror = (ev) => {
+      const msg = `[library-loader] Error loading ${name} from ${url}`;
+      console.error(msg, ev);
+      reject(new Error(msg));
+    };
+
+    document.head.appendChild(script);
+  });
+}
+
+```
+
+### `tonejs/core/synth.js`
+```javascript
+// tonejs/core/synth.js
+
+/**
+ * デフォルト設定のTone.Synthインスタンスを作成し、出力に接続します。
+ * この関数はTone.jsがグローバルスコープにロードされていることを前提とします。
+ *
+ * @returns {Tone.Synth} 設定済みのTone.Synthインスタンス。
+ * @throws {Error} Tone.jsがロードされていない場合にスローされます。
+ */
+export function createDefaultSynth() {
+    // Tone.jsが利用可能かチェック
+    if (typeof Tone === 'undefined') {
+        console.error("[core/synth] Tone.jsがロードされていません。シンセを作成できません。");
+        throw new Error("Tone.js is not loaded. Cannot create synth.");
+    }
+
+    // デフォルトのシンセサイザーを作成し、メイン出力に接続
+    const synth = new Tone.Synth().toDestination();
+    console.log("[core/synth] デフォルトシンセサイザーが作成されました。");
+    return synth;
+}
+
+/**
+ * 指定されたシンセサイザーを使用して、特定の音を鳴らします。
+ *
+ * @param {Tone.Synth} synth
+ * 音を鳴らすために使用するTone.Synthのインスタンス。
+ * @param {string} note
+ * 鳴らす音の音名（例: "C4", "A#3"）。
+ * @param {string} duration
+ * 音の長さ（例: "8n" = 8分音符, "4n" = 4分音符）。
+ */
+export function playSynthNote(synth, note, duration = "8n") {
+    if (!synth || typeof synth.triggerAttackRelease !== 'function') {
+        console.error("[core/synth] 無効なシンセサイザーインスタンスが渡されました。");
+        return;
+    }
+
+    synth.triggerAttackRelease(note, duration);
+    console.log(`[core/synth] シンセで ${note} (${duration}) の音が鳴りました！`);
+}
+
+/**
+ * 読み込みテストを目的とした、シンセでC4の音を鳴らす関数です。
+ * 実際のアプリケーションでは、この関数はテストやデバッグでのみ使用することを推奨します。
+ *
+ * @param {Tone.Synth} synth
+ * 音を鳴らすために使用するTone.Synthのインスタンス。
+ */
+export function playSynthTestSound(synth) {
+    playSynthNote(synth, "C4", "8n");
+}
+
+
+// 将来的に、FMSynthやAMSynthなど、他の種類のシンセサイザーを作成する関数をここに追加できます。
+// 例:
 /*
- * ◆ tonejs-midi-loader.mjs
+export function createFMSynth() {
+    if (typeof Tone === 'undefined') {
+        console.error("[core/synth] Tone.jsがロードされていません。FMSynthを作成できません。");
+        throw new Error("Tone.js is not loaded. Cannot create FMSynth.");
+    }
+    const fmSynth = new Tone.FMSynth().toDestination();
+    console.log("[core/synth] FMシンセサイザーが作成されました。");
+    return fmSynth;
+}
+*/
+
+```
+
+### `tonejs/core/sampler.js`
+```javascript
+// tonejs/core/sampler.js
+// SamplerはTone.jsがグローバルスコープにロードされていることを前提とします。
+
+/**
+ * サラマンダーグランドピアノのサンプルをロードしたTone.Samplerインスタンスを作成し、出力に接続します。
+ * サンプルのロードには時間がかかる場合があります。
+ *
+ * @returns {Promise<Tone.Sampler>} ロードが完了したTone.Samplerインスタンスを解決するPromise。
+ * @throws {Error} Tone.jsがロードされていない場合にスローされます。
+ */
+export function createSalamanderSampler() {
+    if (typeof Tone === 'undefined') {
+        console.error("[core/sampler] Tone.jsがロードされていません。サンプラーを作成できません。");
+        throw new Error("Tone.js is not loaded. Cannot create sampler.");
+    }
+
+    // Tone.Samplerのインスタンスを作成し、サンプルをロード
+    // サラマンダーグランドピアノのサンプルは、Tone.jsの公式デモページで利用されているCDNから取得します。
+    return new Promise((resolve, reject) => {
+        const sampler = new Tone.Sampler({
+            urls: {
+                "C1": "C1.mp3",
+                "C2": "C2.mp3",
+                "C3": "C3.mp3",
+                "C4": "C4.mp3",
+                "C5": "C5.mp3",
+                "C6": "C6.mp3",
+                "C7": "C7.mp3",
+            },
+            baseUrl: "https://tonejs.github.io/audio/salamander/", // サンプルのベースURL
+            onload: () => {
+                console.log("[core/sampler] サラマンダーサンプラーのサンプルがロードされました。");
+                sampler.toDestination(); // メイン出力に接続
+                resolve(sampler); // ロード完了後、サンプラーインスタンスを解決
+            },
+            onerror: (error) => {
+                console.error("[core/sampler] サラマンダーサンプラーのロード中にエラーが発生しました:", error);
+                reject(error); // エラー発生時、Promiseを拒否
+            }
+        });
+    });
+}
+
+/**
+ * 指定されたサンプラーを使用して、特定の音を鳴らします。
+ *
+ * @param {Tone.Sampler} sampler
+ * 音を鳴らすために使用するTone.Samplerのインスタンス。
+ * @param {string} note
+ * 鳴らす音の音名（例: "C4", "A#3"）。
+ * @param {string} duration
+ * 音の長さ（例: "8n" = 8分音符, "4n" = 4分音符）。
+ */
+export function playSamplerNote(sampler, note, duration = "8n") {
+    if (!sampler || typeof sampler.triggerAttackRelease !== 'function') {
+        console.error("[core/sampler] 無効なサンプラーインスタンスが渡されました。");
+        return;
+    }
+
+    sampler.triggerAttackRelease(note, duration);
+    console.log(`[core/sampler] サンプラーで ${note} (${duration}) の音が鳴りました！`);
+}
+
+/**
+ * 読み込みテストを目的とした、サンプラーでC4の音を鳴らす関数です。
+ *
+ * @param {Tone.Sampler} sampler
+ * 音を鳴らすために使用するTone.Samplerのインスタンス。
+ */
+export function playSamplerTestSound(sampler) {
+    playSamplerNote(sampler, "C4", "8n");
+}
+
+```
+### `tonejs/core/setup.js`
+```javascript
+// tonejs/core/setup.js
+
+// Tone.jsがグローバルスコープにロードされていることを前提としています。
+// このモジュールを使用する前に、loader.jsでTone.jsをロードする必要があります。
+
+/** AudioContext がすでに起動済みかどうか */
+let _audioStarted = false;
+
+/**
+ * Tone.js の AudioContext をユーザー操作内で一度だけ再開します。
+ * ユーザーのインタラクション（クリックなど）後に呼び出す必要があります。
+ * 2 回目以降の呼び出しでは何もしません。
+ *
+ * @returns {Promise<void>} オーディオコンテキストが開始されると解決するPromise。
+ * @throws {Error} Tone.jsがロードされていない場合、またはオーディオ初期化中にエラーが発生した場合にスローされます。
+ */
+export async function initToneAudio() {
+    if (typeof Tone === 'undefined') {
+        throw new Error('[core/setup] Tone.js がロードされていません。');
+    }
+
+    if (_audioStarted) {
+        // すでに起動済みならスキップ
+        return;
+    }
+
+    try {
+        await Tone.start();
+        _audioStarted = true;
+        console.log("[core/setup] オーディオコンテキストが開始されました。");
+    } catch (error) {
+        console.error("[core/setup] オーディオの初期化中にエラーが発生しました:", error);
+        throw error;
+    }
+}
+
+```
+### `tonejs/core/tempo.js`
+```javascript
+// tonejs/core/tempo.js
+
+// Tone.jsがグローバルスコープにロードされていることを前提としています。
+// このモジュールを使用する前に、loader.jsでTone.jsをロードする必要があります。
+
+
+/**
+* トランスポートのBPM（テンポ）を設定します。
+ *
+ * @param {number} bpm 設定するBPM。
+ * @throws {Error} Tone.jsがロードされていない場合にスローされます。
+ */
+export function initTempo(bpm) {
+    if (typeof Tone === 'undefined') {
+        throw new Error("[core/tempo] Tone.js is not loaded. Cannot set tempo.");
+    }
+    
+    // Tone.TransportのBPMを設定
+    Tone.Transport.bpm.value = bpm;
+    console.log(`[core/tempo] テンポが ${bpm} BPMに設定されました。`);
+}
+
+/**
+ * 再生を開始します。
+ * * @throws {Error} Tone.jsがロードされていない場合にスローされます。
+ */
+export function startTempo() {
+    if (typeof Tone === 'undefined') {
+        throw new Error("[core/tempo] Tone.js is not loaded. Cannot start tempo.");
+    }
+    
+    // トランスポートを開始
+    Tone.Transport.start();
+    console.log("[core/tempo] 再生を開始しました。");
+}
+
+/**
+ * 再生を停止します。
+ * * @throws {Error} Tone.jsがロードされていない場合にスローされます。
+ */
+export function stopTempo() {
+    if (typeof Tone === 'undefined') {
+        throw new Error("[core/tempo] Tone.js is not loaded. Cannot stop tempo.");
+    }
+    
+    // トランスポートを停止
+    Tone.Transport.stop();
+    console.log("[core/tempo] 再生を停止しました。");
+}
+
+/**
+ * 現在のBPMを取得します。
+ * * @returns {number} 現在のBPM。
+ * @throws {Error} Tone.jsがロードされていない場合にスローされます。
+ */
+export function getBpm() {
+    if (typeof Tone === 'undefined') {
+        throw new Error("[core/tempo] Tone.js is not loaded. Cannot get BPM.");
+    }
+    
+    return Tone.Transport.bpm.value;
+}
+```
+### `tonejs/processor/core-processor.js`
+```javascript
+// processor/core-processor.js
+
+import { loadToneJsMidi } from './tonejs-midi-loader.js';
+import { initTempo } from '../core/tempo.js';
+
+/**
+ * MIDIデータを解析し、Tone.jsのMidiオブジェクトに変換します。
+ * さらに、楽曲のテンポと拍子記号の情報を抽出します。
+ * @param {ArrayBuffer|string} midiData MIDIファイルのArrayBufferまたはBase64文字列。
+ * @returns {Promise<{midi: object, timeSignature: object}>} Tone.jsのMidiオブジェクトと拍子記号を解決するPromise。
+ */
+export async function processMidiData(midiData) {
+    try {
+        const Midi = await loadToneJsMidi();
+        const midi = new Midi(midiData);
+
+        // MIDIヘッダーからテンポ情報を抽出し、tempo.jsに設定
+        if (midi.header && midi.header.tempos && midi.header.tempos.length > 0) {
+            const firstTempo = midi.header.tempos[0].bpm;
+            initTempo(firstTempo);
+            console.log(`[core-processor] MIDIからBPMを検出しました: ${firstTempo}`);
+        } else {
+            initTempo(120);
+            console.warn('[core-processor] MIDIにテンポ情報が見つかりませんでした。デフォルトの120BPMを使用します。');
+        }
+
+        // MIDIヘッダーから拍子記号を抽出し、プレイレンジ計算のために返却する
+        let timeSignature = { beatsPerMeasure: 4, subdivision: 4 }; // デフォルトは4/4拍子
+        if (midi.header && midi.header.timeSignatures && midi.header.timeSignatures.length > 0) {
+            const firstSignature = midi.header.timeSignatures[0];
+            timeSignature = {
+                // テストコードの形式に合わせ、`timeSignature`配列から取得
+                beatsPerMeasure: firstSignature.timeSignature[0], // 分子
+                subdivision: firstSignature.timeSignature[1] // 分母
+            };
+            console.log(`[core-processor] MIDIから拍子記号を検出しました: ${timeSignature.beatsPerMeasure}/${timeSignature.subdivision}`);
+        } else {
+            console.warn('[core-processor] MIDIに拍子記号が見つかりませんでした。デフォルトの4/4拍子を使用します。');
+        }
+
+        // 拍子記号も追加して返す
+        return {
+            midi: midi,
+            timeSignature: timeSignature
+        };
+    } catch (e) {
+        console.error('[core-processor] MIDIデータの解析に失敗しました:', e);
+        throw e;
+    }
+}
+```
+### `tonejs/processor/tonejs-midi-loader.js`
+```javascript
+/*
+ * ◆ tonejs-midi-loader.js
  * - 役割: Skypack経由で @tonejs/midi をロードし、Midi クラスを返す。
  * - 依存: なし
  * - 使い方:
- *   import { loadToneJsMidi } from './tonejs-midi-loader.mjs';
+ *   import { loadToneJsMidi } from './tonejs-midi-loader.js';
  *   const Midi = await loadToneJsMidi();
  *   const midi = new Midi();
  */
@@ -286,29 +458,432 @@ export async function loadToneJsMidi() {
     }
 }
 
+```
+### `tonejs/player/midi-player.js`
+```javascript
+// tonejs/player/midi-player.js
+//
+// v1方針：このプレイヤーは「秒ウィンドウ」で再生する。
+//  - 全再生：start=0, end=曲末秒 を使う
+//  - 部分再生：startSeconds/endSeconds を呼び出し元（Manager等）で決めて渡す
+//  - 小節→秒 への変換は Verovio 側（または上位レイヤ）で行う
+//
+// 依存：
+//  - Tone.js（UMD / window.Tone）
+//  - core/setup.js（initToneAudio）
+//  - core/synth.js（createDefaultSynth）
+//  - （テンポは processor/core-processor.js で初期化済みの前提）
 
-↑のコードが使えないかな？
+import { initToneAudio } from '../core/setup.js';
+import { createDefaultSynth } from '../core/synth.js';
+
+// -------------------------------------------------------
+// 内部状態
+// -------------------------------------------------------
+let _synth = null;             // 現在の再生用インストゥルメント（デフォは Synth）
+let _getInstrument = null;     // 外部から注入されるインストゥルメントファクトリ（Sampler 切替用）
+let _midi = null;              // @tonejs/midi の Midi インスタンス
+let _totalEndSeconds = null;   // 全曲の最終終了秒（time+duration の最大値）をキャッシュ
+
+let _isPlaying = false;
+let _isStopping = false;
+
+let _onPlayStartCallback = () => {};
+let _onPlayEndCallback = () => {};
+
+let _watchdogId = null;
+let _doneCalled = false;
+
+// -------------------------------------------------------
+// 公開API
+// -------------------------------------------------------
+
+/**
+ * プレイヤーのセットアップ。
+ * - AudioContextを（必要なら）起動
+ * - インストゥルメントを準備（デフォルトは Synth、必要なら注入関数で上書き）
+ *
+ * @param {object} opts
+ * @param {object} opts.midi           @tonejs/midi の Midi インスタンス
+ * @param {function(): Promise<AudioNode>|function(): AudioNode} [opts.getInstrument]
+ *        楽器作成関数（例：サンプラーを返す）。戻り値は Tone の発音ノードに繋がるもの。
+ *        未指定時は Synth を作成します。
+ */
+export async function setupMidiPlayer({ midi, getInstrument } = {}) {
+    if (!midi) throw new Error('[midi-player] setupMidiPlayer: "midi" is required.');
+    if (typeof Tone === 'undefined') throw new Error('[midi-player] Tone.js not loaded.');
+
+    await initToneAudio(); // クリック内から呼ばれていることが前提
+
+    _midi = midi;
+    _getInstrument = typeof getInstrument === 'function' ? getInstrument : null;
+
+    // 楽器を初期化（注入優先・なければデフォルトSynth）
+    if (_synth && typeof _synth.dispose === 'function') {
+        try { _synth.dispose(); } catch {}
+        _synth = null;
+    }
+    _synth = _getInstrument ? await _getInstrument() : createDefaultSynth();
+
+    // 全曲の終了秒をキャッシュ（初回のみ計算）
+    _totalEndSeconds = computeTotalEndSeconds(_midi);
+    console.log(`[midi-player] totalEndSeconds = ${_totalEndSeconds.toFixed(3)}s`);
+}
+
+/** 再生中かを返す */
+export function isPlaying() {
+    return _isPlaying;
+}
+
+/** 再生開始フック */
+export function setOnPlayStart(callback) {
+    _onPlayStartCallback = callback || (() => {});
+}
+
+/** 再生終了フック */
+export function setOnPlayEnd(callback) {
+    _onPlayEndCallback = callback || (() => {});
+}
+
+/**
+ * 全再生（曲頭から曲末まで）
+ * @param {Function} [onDone] 完了時に呼ばれるコールバック
+ */
+export function playAll(onDone) {
+    ensureReady();
+    playBySeconds(0, _totalEndSeconds, onDone);
+}
+
+/**
+ * 指定秒範囲を再生（v1基本API）
+ * @param {number} startSeconds 再生開始秒（曲頭=0）
+ * @param {number} endSeconds   再生終了秒（この時点で止める）
+ * @param {Function} [onDone]   完了時のコールバック
+ */
+export function playBySeconds(startSeconds, endSeconds, onDone) {
+    ensureReady();
+
+    if (typeof startSeconds !== 'number' || typeof endSeconds !== 'number') {
+        throw new Error('[midi-player] playBySeconds requires numeric startSeconds and endSeconds.');
+    }
+    if (endSeconds <= startSeconds) {
+        console.warn('[midi-player] endSeconds <= startSeconds. Nothing to play.');
+        stop(); // 念のため
+        onDone && onDone();
+        return;
+    }
+
+    // 既に再生中なら一旦止める
+    if (_isPlaying) {
+        console.warn('[midi-player] Already playing. Stopping current playback before starting new one.');
+        stop(); // クリーン
+    }
+
+    _isPlaying = true;
+    _isStopping = false;
+    _doneCalled = false;
+
+    try { _onPlayStartCallback(); } catch (e) { console.error(e); }
+
+    // Transport をクリーンアップして、タイムラインを再構築
+    try { Tone.Transport.stop(); } catch {}
+    try { Tone.Transport.cancel(0); } catch {}
+
+    // ノートをスケジュール（曲頭からの絶対秒で登録し、start(offset) で途中から再生）
+    // @tonejs/midi の note.time / note.duration は秒なのでそのまま使える
+    _midi.tracks.forEach(track => {
+        track.notes.forEach(note => {
+            const t = note.time;
+            if (t >= startSeconds && t < endSeconds) {
+                // Transport.schedule のコールバック引数 time は AudioContext 時刻
+                Tone.Transport.schedule((time) => {
+                    try {
+                        _synth.triggerAttackRelease(note.name, note.duration, time, note.velocity);
+                    } catch (e) {
+                        console.error('[midi-player] triggerAttackRelease failed:', e);
+                    }
+                }, t); // "when" は曲頭からの絶対秒
+            }
+        });
+    });
+
+    // ★ 終了イベント：Transport の「終端」に停止予約
+    //   cancel はほんの少し先に（境界競合を避けるため 0.001s だけ先へ）
+    const CANCEL_EPS = 0.001;
+    Tone.Transport.scheduleOnce((time /* AudioContext 時刻 */) => {
+        safeStopAndFinish(onDone, time, CANCEL_EPS);
+    }, endSeconds);
+
+    // 再生開始（offset=startSeconds）
+    Tone.Transport.start(undefined, startSeconds);
+
+    // 念のためのウォッチドッグ（スケジューラ取りこぼし保険）
+    const duration = Math.max(0, endSeconds - startSeconds);
+    _watchdogId = setTimeout(() => {
+        if (!_isPlaying || _doneCalled) return;
+        console.warn('[midi-player] Watchdog fired. Forcing stop.');
+        safeStopAndFinish(onDone, undefined, CANCEL_EPS);
+    }, (duration + 0.25) * 1000);
+}
+
+/**
+ * 停止（手動停止）
+ * - scheduleOnce の time（AudioContext時刻）が渡された場合はそれを尊重
+ * - 渡されない場合は即時停止→全キャンセル
+ */
+export function stop(timeArg) {
+    if (_isStopping) return;
+    _isStopping = true;
+
+    // ウォッチドッグ解除
+    if (_watchdogId) {
+        clearTimeout(_watchdogId);
+        _watchdogId = null;
+    }
+
+    if (_isPlaying) {
+        _isPlaying = false;
+
+        try {
+            if (timeArg !== undefined) {
+                Tone.Transport.stop(timeArg);
+                Tone.Transport.cancel(timeArg + 0.001); // ほんの少し先をキャンセル
+            } else {
+                Tone.Transport.stop();
+                Tone.Transport.cancel(0);
+            }
+        } catch (e) {
+            console.error('[midi-player] stop error:', e);
+        }
+
+        try { _onPlayEndCallback(); } catch (e) { console.error(e); }
+    }
+
+    _isStopping = false;
+}
+
+// -------------------------------------------------------
+// 内部ユーティリティ
+// -------------------------------------------------------
+
+/** 全トラック全ノートの (time + duration) の最大値（秒）を返す */
+function computeTotalEndSeconds(midi) {
+    let maxEnd = 0;
+    for (const track of midi.tracks) {
+        for (const n of track.notes) {
+            const end = n.time + n.duration;
+            if (end > maxEnd) maxEnd = end;
+        }
+    }
+    return maxEnd;
+}
+
+function ensureReady() {
+    if (typeof Tone === 'undefined') {
+        throw new Error('[midi-player] Tone.js not loaded.');
+    }
+    if (!_midi) {
+        throw new Error('[midi-player] Not set up. Call setupMidiPlayer() first.');
+    }
+    if (!_synth) {
+        throw new Error('[midi-player] Instrument is not ready.');
+    }
+}
+
+function safeStopAndFinish(done, timeArg, eps = 0.001) {
+    if (_doneCalled) return;
+    _doneCalled = true;
+    try { stop(timeArg !== undefined ? timeArg : undefined - eps); } catch (e) { console.error(e); }
+    try { done && done(); } catch (e) { console.error(e); }
+}
 
 
-#### 2. 音楽再生のコアロジックの実装
+```
+### `tonejs/manager/tonejs-manager.js`
+```javascript
+// tonejs/manager/tonejs-manager.js
+//
+// 役割：上位アプリからの窓口。ロード順や「全再生/部分再生」の分岐、
+//       楽器の選択（synth/sampler）をまとめる。
+// v1方針：
+//  - 小節→秒 への変換は Verovio 側で行い、Manager には秒で渡す（measures対応は将来）。
+//  - 引数なし play() は全再生。play({ seconds: [s, e] }) で部分再生。
+//  - サンプラーは遅延ロードがあり得るため、注入関数で midi-player に渡す。
+// 依存：
+//  - core/loader.js（Tone本体ローダ）
+//  - processor/core-processor.js（MIDI解析：BPM/拍子抽出）
+//  - core/synth.js / core/sampler.js
+//  - player/midi-player.js（このモジュールが実再生）
+//
+// 注意：クリック/タップ等のユーザー操作内で setup() / play() を呼ぶこと。
 
-* **`core/play-range.js`**
-    * 目的: `processor`で変換されたデータを使って、MIDIデータの小節と再生時間の変換ロジックを実装します。例えば、「3小節目から再生」といった指示を、`Tone.js`が理解できる時間に変換する役割です。
-    * 作業内容: 小節番号、拍子、テンポなどの情報から、正確な再生開始・終了時間を計算する関数を実装します。
+import { loadToneJs } from '../core/loader.js';
+import { processMidiData } from '../processor/core-processor.js';
+import { createDefaultSynth } from '../core/synth.js';
+import { createSalamanderSampler } from '../core/sampler.js';
 
-* **`core/playlist-timer.js`**
-    * 目的: 再生とインターバルの制御ロジックを実装します。これは、再生リストの各項目を順次再生したり、特定の区間を繰り返し再生したりする際のタイマーとして機能します。
-    * 作業内容: `Tone.Transport`と`Tone.js`のイベントスケジューリング機能（`Tone.Loop`, `Tone.Part`など）を利用して、再生の開始、停止、一時停止、およびインターバル（例: 各曲間の無音時間）を管理するクラスや関数を実装します。
+import {
+  setupMidiPlayer,
+  setOnPlayStart,
+  setOnPlayEnd,
+  playAll as playerPlayAll,
+  playBySeconds as playerPlayBySeconds,
+  stop as playerStop,
+  isPlaying as playerIsPlaying
+} from '../player/midi-player.js';
 
-#### 3. プレイヤーモジュールの実装
+export class TonejsManager {
+  constructor() {
+    /** @private */ this._midi = null;           // @tonejs/midi の Midi インスタンス
+    /** @private */ this._timeSignature = null;  // { beatsPerMeasure, subdivision }（v1では未使用でも保持）
+    /** @private */ this._instrumentType = 'synth'; // 'synth' | 'sampler'
+  }
 
-* **`player/midi-player.js`** と **`player/jsobject-player.js`**
-    * 目的: これまでのモジュールを使って、実際に音を鳴らすプレイヤーを実装します。`midi-player.js`は`processor`と`play-range`を活用し、`jsobject-player.js`は`processor`で変換されたJavaScriptオブジェクトを直接扱えるようにします。
-    * 作業内容: `initToneAudio()`でAudioContextを開始し、`core/synth.js`や`core/sampler.js`で作成した音源を使い、`core/tempo.js`でテンポを設定して、`play-range`のロジックに基づいて音符をスケジュールします。
+  /**
+   * 初期化。Tone.jsロードとイベントフックを設定。
+   * @param {object} [opts]
+   * @param {'synth'|'sampler'} [opts.instrument='synth'] 使用する楽器
+   * @param {function} [opts.onPlayStart]
+   * @param {function} [opts.onPlayEnd]
+   */
+  async setup(opts = {}) {
+    const { instrument = 'synth', onPlayStart, onPlayEnd } = opts;
+    await loadToneJs(); // UMDで Tone を読み込む
 
-これらのモジュールが連携することで、最終的に`tonejs-manager.js`が全体の制御を行う準備が整います。
+    this._instrumentType = instrument;
 
-もし、この中で特定のモジュールから作業を開始したい、といったご希望があれば、お気軽にお申し付けください。
+    // イベントフックを midi-player に橋渡し
+    setOnPlayStart(typeof onPlayStart === 'function' ? onPlayStart : null);
+    setOnPlayEnd(typeof onPlayEnd === 'function' ? onPlayEnd : null);
+  }
+
+  /**
+   * Verovioから受け取ったMIDI（ArrayBuffer or Base64）を解析・準備。
+   * - @tonejs/midi に通し、BPM等を初期化（processMidiDataが担当）
+   * - 再生用に midi-player をセットアップ（楽器は synth/sampler のどちらか）
+   *
+   * @param {ArrayBuffer|string} midiData
+   */
+  async loadFromVerovio(midiData) {
+    const { midi, timeSignature } = await processMidiData(midiData);
+    this._midi = midi;
+    this._timeSignature = timeSignature;
+
+    // 楽器ファクトリ（注入）。Samplerはロード完了まで待つ必要があるためasync対応。
+    const getInstrument = async () => {
+      if (this._instrumentType === 'sampler') {
+        // サンプラーは重い＆遅い。UI上はロード中表示など行うと親切。
+        return await createSalamanderSampler();
+      } else {
+        return createDefaultSynth();
+      }
+    };
+
+    await setupMidiPlayer({ midi: this._midi, getInstrument });
+  }
+
+  /**
+   * 再生API（v1）
+   * - 引数なし：全再生
+   * - { seconds: [start, end] }：部分再生（秒ウィンドウ）
+   *
+   * @param {object} [opts]
+   * @param {[number, number]} [opts.seconds] [startSeconds, endSeconds]
+   * @param {Function} [opts.onDone] 完了時コールバック
+   */
+  async play(opts = {}) {
+    if (!this._midi) throw new Error('[TonejsManager] MIDI not loaded. Call loadFromVerovio() first.');
+    const { seconds, onDone } = opts;
+
+    if (!seconds) {
+      // 全再生
+      playerPlayAll(onDone);
+      return;
+    }
+    const [s, e] = seconds;
+    playerPlayBySeconds(s, e, onDone);
+  }
+
+  /** 明示停止（ユーザー操作の停止ボタン等から呼ぶ） */
+  stop() {
+    playerStop();
+  }
+
+  /** 再生中か？ */
+  isPlaying() {
+    return playerIsPlaying();
+  }
+
+  /** ランタイムで楽器を切り替える（次回 setup/load 時に反映） */
+  setInstrument(instrument /* 'synth' | 'sampler' */) {
+    if (instrument !== 'synth' && instrument !== 'sampler') {
+      console.warn('[TonejsManager] Unknown instrument type:', instrument);
+      return;
+    }
+    this._instrumentType = instrument;
+  }
+
+  // --- 将来拡張のためのスタブ（v2+予定） -------------------------
+  // async playByMeasures({ measures: [m1, m2], onDone }) {
+  //   // v1では Verovio 側で秒に変換してから play({ seconds }) を呼ぶ想定。
+  //   // 将来ここに「小節→秒」ユーティリティを入れる場合はこのメソッドを実装。
+  // }
+}
+
+```
+
+
+
+
+
+## 使い方
+
+```html
+<button id="load">Load MIDI</button>
+<button id="playAll">Play All</button>
+<button id="playPart">Play 2.0s - 5.0s</button>
+<button id="stop">Stop</button>
+
+<script type="module">
+import { TonejsManager } from './tonejs/manager/tonejs-manager.js';
+
+// 例：ArrayBufferのMIDIを持っている前提（Verovioから取得）
+async function fetchMidiArrayBuffer(url) {
+  const res = await fetch(url);
+  return await res.arrayBuffer();
+}
+
+const mgr = new TonejsManager();
+await mgr.setup({
+  instrument: 'synth', // 'sampler' にすると Salamander をロード
+  onPlayStart: () => console.log('▶ start'),
+  onPlayEnd:   () => console.log('■ end'),
+});
+
+document.getElementById('load').addEventListener('click', async () => {
+  const buf = await fetchMidiArrayBuffer('./path/to/example.mid');
+  await mgr.loadFromVerovio(buf);
+  console.log('loaded');
+});
+
+document.getElementById('playAll').addEventListener('click', () => {
+  mgr.play(); // 引数なし → 全再生
+});
+
+document.getElementById('playPart').addEventListener('click', () => {
+  mgr.play({ seconds: [2.0, 5.0] }); // 秒ウィンドウで部分再生
+});
+
+document.getElementById('stop').addEventListener('click', () => {
+  mgr.stop();
+});
+</script>
+
+```
+
+
+
+つまり“迷子イベント＋二重経路”を潰したのが効いてます。根っこは Transportの残イベント or 出力経路の取りこぼし でしたね。
 
 
 
@@ -322,10 +897,49 @@ export async function loadToneJsMidi() {
 
 
 
-以上が現段階の作業（少しずつモジュールを作っている）
-以下は、今後の方向性のメモ
 
------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

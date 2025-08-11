@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Tone minimal test</title>
+<button id="play">Play (C5 0.75s)</button>
+<button id="stop">Stop</button>
+<pre id="log"></pre>
+<script>
+  // 接続監視
+  (function () {
+    const orig = AudioNode.prototype.connect;
+    AudioNode.prototype.connect = function (dest, ...rest) {
+      try {
+        if (dest && dest.context && dest === dest.context.destination) {
+          console.warn('[connect→destination]', this?.constructor?.name || this);
+        }
+      } catch {}
+      return orig.call(this, dest, ...rest);
+    };
+  })();
+
+  const log = (...a)=>{ document.getElementById('log').textContent += a.join(' ')+'\n'; console.log(...a); };
+
+  // Tone読み込み
+  const s = document.createElement('script');
+  s.src = 'https://unpkg.com/tone@15.1.22/build/Tone.js';
+  s.onload = () => log('Tone loaded');
+  document.head.appendChild(s);
+
+  let synth;
+
+  async function ensure() {
+    if (!window.Tone) { throw new Error('Tone not loaded'); }
+    await Tone.start();
+    if (!synth) {
+      synth = new Tone.Synth().toDestination();
+      log('synth created');
+    }
+  }
+
+  document.getElementById('play').onclick = async () => {
+    await ensure();
+
+    // クリア
+    Tone.Transport.stop();
+    Tone.Transport.cancel(0);
+
+    // C5 を 0s に 0.75s 鳴らすだけ
+    Tone.Transport.schedule((t)=>{
+      log('note on @', t);
+      synth.triggerAttackRelease('C5', 0.75, t, 0.9);
+    }, 0);
+
+    // 0.75s で停止
+    Tone.Transport.scheduleOnce((t)=>{
+      log('transport stop @', t);
+      Tone.Transport.stop(t);
+      Tone.Transport.cancel(t + 0.001);
+    }, 0.75);
+
+    Tone.Transport.start(undefined, 0);
+    log('transport started');
+  };
+
+  document.getElementById('stop').onclick = ()=>{
+    try {
+      Tone.Transport.stop();
+      Tone.Transport.cancel(0);
+      log('manual stop');
+    } catch(e) { console.error(e); }
+  };
+</script>

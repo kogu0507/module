@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Tonejs v1 / Range Playback</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            margin: 16px;
+        }
+
+        #score {
+            border: 1px solid #ddd;
+            min-height: 160px;
+            padding: 8px;
+            margin-top: 8px;
+        }
+
+        .row {
+            margin: 6px 0;
+        }
+
+        input[type=number] {
+            width: 90px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>部分再生（秒ウィンドウ）</h1>
+
+    <fieldset>
+        <legend>1) MEI 入力と表示</legend>
+        <div class="row">
+            <label>MEI URL:
+                <input id="meiUrl" type="text" size="80"
+                    value="https://cdn.jsdelivr.net/gh/kogu0507/dev@main/0-temp/sample1.mei">
+            </label>
+        </div>
+        <div class="row">
+            <label>小節範囲（例: 1-4）:
+                <input id="mrange" type="text" size="12" placeholder="空で全体">
+            </label>
+        </div>
+        <div class="row">
+            <button id="btnShow">SVG表示</button>
+            <button id="btnMidiAll">MIDI（全体）</button>
+            <button id="btnMidiRange">MIDI（範囲）</button>
+            <span id="meiStatus" class="note"></span>
+        </div>
+        <div id="score"></div>
+    </fieldset>
+
+    <fieldset>
+        <legend>2) Manager</legend>
+        <div class="row">
+            <label><input type="radio" name="inst" value="synth" checked> Synth</label>
+            <label><input type="radio" name="inst" value="sampler"> Sampler</label>
+        </div>
+        <div class="row">
+            <button id="btnSetup">setup()</button>
+            <button id="btnBind">bind MIDI</button>
+            <span id="setupStatus" class="note"></span>
+        </div>
+    </fieldset>
+
+    <fieldset>
+        <legend>3) 再生</legend>
+        <div class="row">
+            <button id="btnPlayAll">全再生</button>
+            <button id="btnStop">停止</button>
+        </div>
+        <div class="row">
+            <label>start(s) <input id="secStart" type="number" value="0" step="0.1"></label>
+            <label>end(s) <input id="secEnd" type="number" value="3" step="0.1"></label>
+            <button id="btnPlaySec">部分再生</button>
+        </div>
+    </fieldset>
+
+    <script type="module">
+        import { VerovioManager } from "https://cdn.jsdelivr.net/gh/kogu0507/module@v2.4.0/verovio/verovio-manager.min.js";
+        import { TonejsManager } from "../manager/tonejs-manager.js";
+
+        const vrv = new VerovioManager();
+        const mgr = new TonejsManager();
+
+        // オプション設定
+        const baseOptions = {
+            svgViewBox: false,
+            adjustPageHeight: true,
+            adjustPageWidth: true,
+            breaks: 'encoded',
+            spacingStaff: 5,
+            spacingSystem: 15,
+            footer: 'none',
+        };
+
+        const svgViewBox = {
+            ...baseOptions,
+            svgViewBox: true,
+            pageMarginTop: 0,
+            pageMarginRight: 0,
+            pageMarginBottom: 0,
+            pageMarginLeft: 0,
+        };
+
+
+        const $ = (id) => document.getElementById(id);
+        const g = (name) => [...document.querySelectorAll(`[name="${name}"]`)].find(r => r.checked)?.value;
+
+        let midiBuf = null;
+
+        $('btnShow').addEventListener('click', async () => {
+            const url = $('meiUrl').value.trim();
+            const mrange = $('mrange').value.trim();
+            $('meiStatus').textContent = '表示中…';
+            await vrv.initialize();
+            vrv.setRenderOptions(svgViewBox);
+            await vrv.displaySvgFromUrl(url, 'score', { page: 1, measureRange: mrange || '' });
+            $('meiStatus').textContent = 'SVG OK';
+        });
+
+        $('btnMidiAll').addEventListener('click', async () => {
+            const url = $('meiUrl').value.trim();
+            $('meiStatus').textContent = 'MIDI全体 取得中…';
+            midiBuf = await vrv.getMidiFromUrl(url);
+            $('meiStatus').textContent = `MIDI全体 OK (${midiBuf.byteLength} bytes)`;
+        });
+
+        $('btnMidiRange').addEventListener('click', async () => {
+            const url = $('meiUrl').value.trim();
+            const mrange = $('mrange').value.trim();
+            if (!mrange) return alert('小節範囲を入れてください (例: 1-4)');
+            $('meiStatus').textContent = 'MIDI範囲 取得中…';
+            midiBuf = await vrv.getMidiFromUrl(url, { measureRange: mrange });
+            $('meiStatus').textContent = `MIDI範囲 OK (${midiBuf.byteLength} bytes)`;
+        });
+
+        $('btnSetup').addEventListener('click', async () => {
+            await mgr.setup({
+                instrument: g('inst'),
+                onPlayStart: () => console.log('▶ onPlayStart'),
+                onPlayEnd: () => console.log('■ onPlayEnd'),
+            });
+            $('setupStatus').textContent = 'setup OK';
+        });
+
+        $('btnBind').addEventListener('click', async () => {
+            if (!midiBuf) return alert('先にMIDI取得してください');
+            await mgr.loadFromVerovio(midiBuf);
+            $('setupStatus').textContent = 'MIDIバインド OK';
+        });
+
+        $('btnPlayAll').addEventListener('click', () => mgr.play());
+        $('btnStop').addEventListener('click', () => mgr.stop());
+
+        $('btnPlaySec').addEventListener('click', () => {
+            const s = parseFloat($('secStart').value);
+            const e = parseFloat($('secEnd').value);
+            if (!Number.isFinite(s) || !Number.isFinite(e)) return alert('start/end は数値で');
+            mgr.play({ seconds: [s, e] });
+        });
+    </script>
+</body>
+
+</html>

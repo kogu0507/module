@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tonejs v1 / Standalone MIDI</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body{ font-family: system-ui, sans-serif; margin:16px; }
+    input[type=text]{ width: 520px; }
+    button{ margin-right:8px; }
+  </style>
+</head>
+<body>
+  <h1>スタンドアロン: .mid を直接再生</h1>
+
+  <div>
+    <label>MIDI URL:
+      <input id="midiUrl" type="text"
+        value="https://cdn.jsdelivr.net/gh/Tonejs/Midi@master/test/midi/bach/minuet.mid">
+    </label>
+    <button id="btnFetch">fetch</button>
+    <span id="status" class="note"></span>
+  </div>
+
+  <hr/>
+  <div>
+    <button id="btnSetup">Manager setup（synth）</button>
+    <button id="btnBind">bind MIDI</button>
+    <button id="btnPlay">全再生</button>
+    <button id="btnPlayRange">部分再生 0-5s</button>
+    <button id="btnStop">停止</button>
+  </div>
+
+  <script type="module">
+    import { TonejsManager } from "../manager/tonejs-manager.js";
+
+    const mgr = new TonejsManager();
+    const $ = (id) => document.getElementById(id);
+
+    let midiBuf = null;
+
+    $('btnFetch').addEventListener('click', async () => {
+      $('status').textContent = 'fetch中…';
+      const res = await fetch($('midiUrl').value.trim());
+      midiBuf = await res.arrayBuffer();
+      $('status').textContent = `OK (${midiBuf.byteLength} bytes)`;
+    });
+
+    $('btnSetup').addEventListener('click', async () => {
+      await mgr.setup({
+        instrument: 'synth',
+        onPlayStart: () => console.log('▶ onPlayStart'),
+        onPlayEnd:   () => console.log('■ onPlayEnd'),
+      });
+      $('status').textContent = 'setup OK';
+    });
+
+    $('btnBind').addEventListener('click', async () => {
+      if (!midiBuf) return alert('先に fetch してください');
+      await mgr.loadFromVerovio(midiBuf); // Verovioなしでも ArrayBuffer を渡せばOK
+      $('status').textContent = 'bind OK';
+    });
+
+    $('btnPlay').addEventListener('click', () => mgr.play());
+    $('btnPlayRange').addEventListener('click', () => mgr.play({ seconds:[0,5] }));
+    $('btnStop').addEventListener('click', () => mgr.stop());
+  </script>
+</body>
+</html>

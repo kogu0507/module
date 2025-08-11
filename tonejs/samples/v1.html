@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Tonejs v1 サンプル（Verovio連携・全再生／部分再生テスト）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:,">
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            margin: 16px;
+        }
+
+        fieldset {
+            margin: 12px 0;
+            padding: 12px;
+        }
+
+        label {
+            display: inline-block;
+            min-width: 160px;
+        }
+
+        #score {
+            border: 1px solid #ddd;
+            min-height: 160px;
+            padding: 8px;
+            margin-top: 8px;
+        }
+
+        .row {
+            margin: 6px 0;
+        }
+
+        button {
+            margin-right: 6px;
+        }
+
+        .note {
+            color: #555;
+            font-size: 0.9em;
+        }
+
+        .ok {
+            color: #0a0;
+        }
+
+        .warn {
+            color: #a60;
+        }
+
+        .err {
+            color: #c00;
+        }
+
+        pre.log {
+            background: #111;
+            color: #ddd;
+            padding: 10px;
+            overflow: auto;
+            max-height: 240px;
+        }
+
+        code {
+            background: #f5f5f5;
+            padding: 2px 4px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Tonejs v1 サンプル</h1>
+    <p class="note">このページは <code>tonejs/manager/tonejs-manager.js</code> と
+        <code>tonejs/player/midi-player.js</code>（秒ウィンドウ方式）を使った動作確認用です。
+    </p>
+
+    <fieldset>
+        <legend>1. MEI 入力と表示（VerovioManager）</legend>
+        <div class="row">
+            <label for="meiUrl">MEI URL:</label>
+            <!-- <input id="meiUrl" type="text" size="80"
+                value="https://cdn.jsdelivr.net/gh/kogu0507/module@v2.9.0/examples/sample.mei" /> -->
+            <input id="meiUrl" type="text" size="80"
+                value="https://cdn.jsdelivr.net/gh/kogu0507/dev@main/0-temp/sample1.mei" />
+        </div>
+        <div class="row">
+            <label for="measureRange">小節範囲（例: 1-4）:</label>
+            <input id="measureRange" type="text" size="12" placeholder="空で全体" />
+            <span class="note">※ 空欄なら全体</span>
+        </div>
+        <div class="row">
+            <button id="btnShowScore">SVG表示</button>
+            <button id="btnGetMidiAll">MIDI取得（全体）</button>
+            <button id="btnGetMidiRange">MIDI取得（小節範囲）</button>
+            <span id="meiStatus" class="note"></span>
+        </div>
+        <div id="score"></div>
+    </fieldset>
+
+    <fieldset>
+        <legend>2. Tone.js / Manager セットアップ</legend>
+        <div class="row">
+            <label>楽器選択:</label>
+            <label><input type="radio" name="inst" value="synth" checked> Synth（軽量）</label>
+            <label><input type="radio" name="inst" value="sampler"> Sampler（Salamander・初回重い）</label>
+        </div>
+        <div class="row">
+            <button id="btnLoadTone">Tone.js ロード</button>
+            <button id="btnSetupManager">Manager セットアップ</button>
+            <button id="btnBindMidi">MIDIをManagerに渡す</button>
+            <span id="setupStatus" class="note"></span>
+        </div>
+    </fieldset>
+
+    <fieldset>
+        <legend>3. 再生テスト</legend>
+        <div class="row">
+            <button id="btnPlayAll">全再生</button>
+            <button id="btnStop">停止</button>
+        </div>
+        <div class="row">
+            <label for="secStart">部分再生（秒）: start</label>
+            <input id="secStart" type="number" value="0" step="0.1" style="width:90px;">
+            <label for="secEnd">end</label>
+            <input id="secEnd" type="number" value="3" step="0.1" style="width:90px;">
+            <button id="btnPlaySeconds">この秒範囲で再生</button>
+        </div>
+        <div class="row note">
+            ※ v1では「小節→秒」変換は Verovio 側で行い、Manager には秒で渡す方針です。ここでは<strong>秒指定</strong>を直接テストします。
+        </div>
+    </fieldset>
+
+    <fieldset>
+        <legend>4. ログ（コンソールと同内容）</legend>
+        <button id="btnClearLog">ログクリア</button>
+        <pre class="log" id="log"></pre>
+    </fieldset>
+
+    <script type="module">
+
+        // ---- ここから：HTMLAudio/HTMLVideo の再生を監視して犯人を特定 ----
+        (() => {
+            const log = (...a) => console.warn('[media-play]', ...a);
+
+            // new Audio(...) の監視
+            const OrigAudio = window.Audio;
+            window.Audio = function (...args) {
+                const a = new OrigAudio(...args);
+                try {
+                    log('new Audio()', { src: a.src || args[0] || '', stack: (new Error()).stack });
+                } catch { }
+                return a;
+            };
+            window.Audio.prototype = OrigAudio.prototype;
+
+            // HTMLMediaElement.play() の監視
+            const proto = HTMLMediaElement.prototype;
+            const origPlay = proto.play;
+            proto.play = function (...args) {
+                try {
+                    log('play()', { tag: this.tagName, src: this.currentSrc || this.src, stack: (new Error()).stack });
+                } catch { }
+                return origPlay.apply(this, args);
+            };
+
+            // 既存 <audio>/<video> 一覧ダンプ
+            window.addEventListener('load', () => {
+                document.querySelectorAll('audio,video').forEach(el => {
+                    log('existing media element', { tag: el.tagName, src: el.currentSrc || el.src });
+                });
+            });
+        })();
+
+
+
+
+
+
+
+
+        // 誰が AudioDestination に connect してるか検知
+        (function () {
+            const orig = AudioNode.prototype.connect;
+            AudioNode.prototype.connect = function (dest, ...rest) {
+                // AudioDestinationNode への直結を警告
+                try {
+                    if (dest && dest.context && dest === dest.context.destination) {
+                        console.warn('[connect→destination]', this?.constructor?.name || this, { stack: (new Error()).stack });
+                    }
+                } catch { }
+                return orig.call(this, dest, ...rest);
+            };
+        })();
+
+        // ================================
+        // インポート
+        // ================================
+        import { VerovioManager } from 'https://cdn.jsdelivr.net/gh/kogu0507/module@v2.4.0/verovio/verovio-manager.min.js';
+        import { TonejsManager } from '../manager/tonejs-manager.js';
+
+        // ================================
+        // 簡易ロガー（画面にも出す）
+        // ================================
+        const logView = document.getElementById('log');
+        const nativeLog = console.log.bind(console);
+        const nativeWarn = console.warn.bind(console);
+        const nativeError = console.error.bind(console);
+        function appendLog(prefix, ...args) {
+            const msg = `[${prefix}] ` + args.map(a => {
+                try { return typeof a === 'string' ? a : JSON.stringify(a); }
+                catch { return String(a); }
+            }).join(' ');
+            logView.textContent += msg + '\n';
+        }
+        console.log = (...args) => { appendLog('LOG', ...args); nativeLog(...args); };
+        console.warn = (...args) => { appendLog('WARN', ...args); nativeWarn(...args); };
+        console.error = (...args) => { appendLog('ERR', ...args); nativeError(...args); };
+
+        // ================================
+        // DOM参照
+        // ================================
+        const $ = (id) => document.getElementById(id);
+        const meiUrlEl = $('meiUrl');
+        const measureRangeEl = $('measureRange');
+        const scoreEl = $('score');
+        const meiStatusEl = $('meiStatus');
+        const setupStatusEl = $('setupStatus');
+        const secStartEl = $('secStart');
+        const secEndEl = $('secEnd');
+
+        // ================================
+        // 状態
+        // ================================
+        const vrv = new VerovioManager();
+        const mgr = new TonejsManager();
+
+        let currentMidiBuffer = null; // ArrayBuffer（全体 or 範囲）
+        let currentMidiInfo = null;   // { type: 'all' | 'range', measureRange?: string }
+
+        // ================================
+        // 1. Verovio: 表示＆MIDI取得
+        // ================================
+        $('btnShowScore').addEventListener('click', async () => {
+            const url = meiUrlEl.value.trim();
+            const mrange = measureRangeEl.value.trim();
+            try {
+                meiStatusEl.textContent = 'SVG表示中…';
+                console.log('[verovio] initialize()');
+                await vrv.initialize();
+                console.log('[verovio] displaySvgFromUrl', { url, mrange });
+                await vrv.displaySvgFromUrl(url, 'score', { page: 1, measureRange: mrange || '' });
+                meiStatusEl.textContent = 'SVG表示OK';
+            } catch (e) {
+                console.error('[verovio] display error:', e);
+                meiStatusEl.textContent = 'SVG表示エラー';
+            }
+        });
+
+        $('btnGetMidiAll').addEventListener('click', async () => {
+            const url = meiUrlEl.value.trim();
+            try {
+                meiStatusEl.textContent = 'MIDI取得（全体）…';
+                console.log('[verovio] getMidiFromUrl (ALL)', { url });
+                const buf = await vrv.getMidiFromUrl(url);
+                currentMidiBuffer = buf;
+                currentMidiInfo = { type: 'all' };
+                console.log('[verovio] MIDI(all) size:', buf.byteLength, 'bytes');
+                meiStatusEl.textContent = 'MIDI取得OK（全体）';
+            } catch (e) {
+                console.error('[verovio] MIDI(all) error:', e);
+                meiStatusEl.textContent = 'MIDI取得エラー（全体）';
+            }
+        });
+
+        $('btnGetMidiRange').addEventListener('click', async () => {
+            const url = meiUrlEl.value.trim();
+            const mrange = measureRangeEl.value.trim();
+            if (!mrange) {
+                alert('小節範囲を入力してください（例: 1-4）');
+                return;
+            }
+            try {
+                meiStatusEl.textContent = 'MIDI取得（範囲）…';
+                console.log('[verovio] getMidiFromUrl (RANGE)', { url, mrange });
+                const buf = await vrv.getMidiFromUrl(url, { measureRange: mrange });
+                currentMidiBuffer = buf;
+                currentMidiInfo = { type: 'range', measureRange: mrange };
+                console.log('[verovio] MIDI(range) size:', buf.byteLength, 'bytes');
+                meiStatusEl.textContent = `MIDI取得OK（範囲: ${mrange}）`;
+            } catch (e) {
+                console.error('[verovio] MIDI(range) error:', e);
+                meiStatusEl.textContent = 'MIDI取得エラー（範囲）';
+            }
+        });
+
+        // ================================
+        // 2. Tone.js / Manager セットアップ
+        // ================================
+        $('btnLoadTone').addEventListener('click', async () => {
+            try {
+                // Manager.setup() 内で loader を呼ぶので、ここではユーザー操作保証用のダミーです。
+                // ただし、意図を明確にするため分けています。
+                console.log('[tone] will be loaded by manager.setup()');
+                //setupStatusEl.textContent = 'Tone.jsロードは setup() 時に実施';
+                setupStatusEl.textContent = 'Manager setup OK（instrument=SilentInstrument）';
+
+            } catch (e) {
+                console.error('[tone] load error:', e);
+                setupStatusEl.textContent = 'Tone.jsロードでエラー';
+            }
+        });
+
+        $('btnSetupManager').addEventListener('click', async () => {
+            try {
+                const inst = getSelectedInstrument();
+                console.log('[manager] setup start', { instrument: inst });
+
+                
+                
+                
+                const SilentInstrument = {
+                    triggerAttackRelease: (...args) => console.log('[silent] TAR', args),
+                    releaseAll: (...args) => console.log('[silent] releaseAll', args),
+                    connect: () => { }, disconnect: () => { }
+                };
+                await mgr.setup({
+                    instrument: 'synth',
+                    getInstrument: () => SilentInstrument,
+                    onPlayStart: () => console.log('[manager] ▶ onPlayStart'),
+                    onPlayEnd: () => console.log('[manager] ■ onPlayEnd'),
+                });
+
+                /*
+                await mgr.setup({
+                    instrument: inst,
+                    onPlayStart: () => console.log('[manager] ▶ onPlayStart'),
+                    onPlayEnd: () => console.log('[manager] ■ onPlayEnd'),
+                });
+                */
+                setupStatusEl.textContent = `Manager setup OK（instrument=${inst}）`;
+                console.log('[manager] setup done');
+            } catch (e) {
+                console.error('[manager] setup error:', e);
+                setupStatusEl.textContent = 'Manager setup エラー';
+            }
+        });
+
+        $('btnBindMidi').addEventListener('click', async () => {
+            if (!currentMidiBuffer) {
+                alert('先に「MIDI取得（全体／範囲）」を実行してください。');
+                return;
+            }
+            try {
+                console.log('[manager] loadFromVerovio start', currentMidiInfo || {});
+                await mgr.loadFromVerovio(currentMidiBuffer); // 内部で @tonejs/midi 解析＆tempo初期化＆playerセットアップ
+                setupStatusEl.textContent = 'MIDIをManagerにバインドしました';
+                console.log('[manager] loadFromVerovio done');
+            } catch (e) {
+                console.error('[manager] loadFromVerovio error:', e);
+                setupStatusEl.textContent = 'MIDIバインドでエラー';
+            }
+        });
+
+        function getSelectedInstrument() {
+            const v = [...document.querySelectorAll('input[name="inst"]')]
+                .find(r => r.checked)?.value || 'synth';
+            return v;
+        }
+
+        // ================================
+        // 3. 再生テスト
+        // ================================
+        $('btnPlayAll').addEventListener('click', () => {
+            try {
+                console.log('[play] play() ＝ 全再生');
+                mgr.play(); // 引数なし → 全再生
+            } catch (e) {
+                console.error('[play] play() error:', e);
+            }
+        });
+
+        $('btnPlaySeconds').addEventListener('click', () => {
+            const s = parseFloat(secStartEl.value);
+            const e = parseFloat(secEndEl.value);
+            if (!(isFinite(s) && isFinite(e))) {
+                alert('start / end に数値を入力してください。');
+                return;
+            }
+            try {
+                console.log('[play] play({seconds})', { start: s, end: e });
+                mgr.play({ seconds: [s, e] });
+            } catch (e2) {
+                console.error('[play] play({seconds}) error:', e2);
+            }
+        });
+
+        $('btnStop').addEventListener('click', () => {
+            try {
+                console.log('[play] stop()');
+                mgr.stop();
+            } catch (e) {
+                console.error('[play] stop() error:', e);
+            }
+        });
+
+        // ================================
+        // 4. ログクリア
+        // ================================
+        $('btnClearLog').addEventListener('click', () => {
+            logView.textContent = '';
+            console.log('[log] cleared');
+        });
+
+        // ================================
+        // 補助：ページ初期化ログ
+        // ================================
+        console.log('[sample] ready. 操作手順: 1) SVG表示 or MIDI取得 → 2) Manager setup → 3) MIDIバインド → 4) 再生テスト');
+    </script>
+</body>
+
+</html>

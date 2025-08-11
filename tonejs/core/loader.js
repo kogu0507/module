@@ -1,5 +1,5 @@
 // tonejs/core/loader.js
-import { loadScript } from '../../library-loader.mjs'; // library-loader.mjsへの相対パス
+import { loadScript } from '../../library-loader.js'; // library-loader.jsへの相対パス
 
 /**
  * Tone.jsをロードします。

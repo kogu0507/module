@@ -3,7 +3,7 @@
  * - 役割: Skypack経由で @tonejs/midi をロードし、Midi クラスを返す。
  * - 依存: なし
  * - 使い方:
- *   import { loadToneJsMidi } from './tonejs-midi-loader.mjs';
+ *   import { loadToneJsMidi } from './tonejs-midi-loader.js';
  *   const Midi = await loadToneJsMidi();
  *   const midi = new Midi();
  */
