@@ -3,8 +3,9 @@
 // 接続はプレイヤー側（midi-player.js）で専用バス（_outGain）へ行う
 
 /**
- * デフォルト設定の Tone.Synth を作成して返します（未接続）。
- * @returns {any} Tone.Synth インスタンス（未接続）
+ * デフォルト設定の PolySynth(Tone.Synth) を作成して返します（未接続）。
+ * 和音（配列）を triggerAttackRelease に渡せます。
+ * @returns {any} Tone.PolySynth インスタンス（未接続）
  * @throws {Error} Tone.js が未ロードの場合
  */
 export function createDefaultSynth() {
@@ -13,24 +14,32 @@ export function createDefaultSynth() {
     throw new Error('Tone.js is not loaded. Cannot create synth.');
   }
 
-  const synth = new Tone.Synth();
+  // v15系で広く動く生成方法：Voiceに Tone.Synth を使う PolySynth
+  // maxPolyphony は必要に応じて調整（12〜24程度）
+  const poly = new Tone.PolySynth(Tone.Synth, {
+    maxPolyphony: 12,
+    // voice のデフォルト Envelope を少しだけ短めに
+    // （環境により無視される場合もあるので try/catch 下で set も行います）
+    envelope: { attack: 0.01, release: 0.1 },
+  });
 
   // 安全な初期値（必要に応じて調整）
   try {
-    synth.volume.value = 0;      // dB
-    synth.envelope.attack = 0.01;
-    synth.envelope.release = 0.1;
+    poly.volume.value = 0; // dB
+    // 念のため set 経由でも反映を試みる（将来のTone変更に備えて）
+    poly.set?.({ envelope: { attack: 0.01, release: 0.1 } });
   } catch (e) {
     console.warn('[core/synth] init params failed:', e);
   }
 
-  console.log('[core/synth] デフォルトシンセサイザーを作成（未接続）');
-  return synth;
+  console.log('[core/synth] デフォルトPolySynthを作成（未接続）');
+  return poly;
 }
 
 /**
  * 単音テスト（接続は呼び出し側の責務）
- * @param {any} synth Tone.Synth
+ * PolySynth でも単音はそのまま鳴らせます。
+ * @param {any} synth Tone.PolySynth
  * @param {string} note e.g. "C4"
  * @param {string|number} [duration="8n"]
  */
