@@ -192,29 +192,97 @@ export class TonejsManager {
    * @param {string} [opts.bellId="endBell1"] - 将来切替用のID（今は簡易マッピング）
    * @returns {Promise<void>}
    */
+  // TonejsManager 内：既存の playBell をこの実装に置き換え
   async playBell(opts = {}) {
-    const { bellId = "endBell1" } = opts;
     if (!this._isSetup) return;
 
-    // サンプラー優先／無ければシンセ
+    // デフォルト: 時報スタイル / C6 / 0.5秒後に開始
+    const {
+      style = "timeSignal",        // "timeSignal" | "double" | "ascending3" | "single"
+      baseNote = "C6",
+      delay = 0.5,                 // 演奏終了→ベル開始までの待ち秒
+      velocity = 0.9,
+    } = opts || {};
+
     const instrument = await this._ensureInstrument();
     if (!instrument || typeof instrument.triggerAttackRelease !== "function") return;
 
-    // —— 簡易マッピング（必要に応じて拡張）——
-    // endBell1: 明るめ短音、endBell2: 低め短音…など
-    const preset = {
-      endBell1: { note: "C6", dur: 0.2, vel: 0.9 },
-      endBell2: { note: "G5", dur: 0.25, vel: 0.9 },
-    }[bellId] || { note: "C6", dur: 0.2, vel: 0.9 };
-
+    // スケジュール基準時刻
     const now = (typeof Tone !== "undefined" && Tone.now) ? Tone.now() : 0;
-    try {
-      instrument.triggerAttackRelease(preset.note, preset.dur, now, preset.vel);
-    } catch (e) {
-      console.warn("[tonejsManager] playBell failed:", e);
+    const t0 = now + Math.max(0, Number(delay) || 0);
+
+    // --- パターン定義 -------------------------------------------------
+    // 各イベント: { note, dur(秒), at(開始オフセット秒) }
+    let sequence = [];
+
+    // 互換: 旧 bellId が来ていても無視してOK（style が優先 / 未指定なら既定で timeSignal）
+    switch (style) {
+      case "double":
+        // ピン…ピン（軽快な2発）
+        sequence = [
+          { note: baseNote, dur: 0.18, at: 0.00 },
+          { note: baseNote, dur: 0.18, at: 0.35 },
+        ];
+        break;
+
+      case "ascending3":
+        // 3音上昇（C→E→G っぽい動き）
+        sequence = [
+          { note: baseNote, dur: 0.18, at: 0.00 },
+          { note: this._transposeNote(baseNote, 4), dur: 0.18, at: 0.25 },
+          { note: this._transposeNote(baseNote, 7), dur: 0.22, at: 0.50 },
+        ];
+        break;
+
+      case "single":
+        // 従来互換の単発
+        sequence = [{ note: baseNote, dur: 0.20, at: 0.00 }];
+        break;
+
+      case "timeSignal":
+      default:
+        // ピッ・ピッ・ピッ・ピー（3短＋1長、最後だけ完全五度上）
+        const hi = this._transposeNote(baseNote, 7); // 完全五度
+        sequence = [
+          { note: baseNote, dur: 0.12, at: 0.00 },
+          { note: baseNote, dur: 0.12, at: 0.50 },
+          { note: baseNote, dur: 0.12, at: 1.00 },
+          { note: hi, dur: 0.50, at: 1.50 },
+        ];
+        break;
     }
-    await new Promise((r) => setTimeout(r, Math.max(0, preset.dur * 1000)));
+
+    // --- スケジュール & 待機 ------------------------------------------
+    let lastEnd = t0;
+    for (const ev of sequence) {
+      const when = t0 + (Number(ev.at) || 0);
+      const dur = Math.max(0, Number(ev.dur) || 0);
+      try {
+        instrument.triggerAttackRelease(ev.note, dur, when, velocity);
+      } catch (e) {
+        console.warn("[tonejsManager] playBell event failed:", ev, e);
+      }
+      lastEnd = Math.max(lastEnd, when + dur);
+    }
+
+    // すべて鳴り終わるまで待つ（EasyMelody 側は await 済みでUIを閉じやすい）
+    await new Promise((r) => setTimeout(r, Math.max(0, (lastEnd - now) * 1000)));
   }
+
+  /** @private 音名を半音単位で移調（Tone.Frequencyが使えない環境なら元音を返す） */
+  _transposeNote(note, semitones) {
+    try {
+      if (typeof Tone !== "undefined" && Tone.Frequency) {
+        const midi = Tone.Frequency(note).toMidi();
+        if (!Number.isFinite(midi)) return note;
+        const next = midi + (Number(semitones) || 0);
+        return Tone.Frequency(next, "midi").toNote();
+      }
+    } catch (_) { }
+    return note;
+  }
+
+
 
   /** @private */
   async _ensureInstrument() {
