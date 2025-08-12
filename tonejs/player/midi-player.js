@@ -38,25 +38,68 @@ export async function setupMidiPlayer({ midi, getInstrument } = {}) {
   if (!midi) throw new Error('[midi-player] setupMidiPlayer: "midi" is required.');
   if (typeof Tone === 'undefined') throw new Error('[midi-player] Tone.js not loaded.');
 
+  // AudioContext をユーザー操作後に確実に起動
   await initToneAudio();
 
   _midi = midi;
-  _getInstrument = typeof getInstrument === 'function' ? getInstrument : null;
+  _getInstrument = (typeof getInstrument === 'function') ? getInstrument : null;
 
-  if (!_outGain) _outGain = new Tone.Gain(1).toDestination();
-
-  if (_synth && typeof _synth.dispose === 'function') {
-    try { _synth.dispose(); } catch {} // 旧楽器は破棄
-    _synth = null;
+  // 出力バス（プレイヤーの最終段）
+  if (!_outGain) {
+    _outGain = new Tone.Gain(1).toDestination();
   }
-  _synth = _getInstrument ? await _getInstrument() : createDefaultSynth();
 
-  try { _synth.disconnect?.(); } catch {}
-  try { _synth.connect?.(_outGain); } catch {}
+  // ★ ここが重要：楽器は dispose しない。必要に応じて「差し替え」だけ行う。
+  // TonejsManager 側で instrument タイプが変わった場合、_getInstrument() は新しい実体を返すはず。
+  if (_getInstrument) {
+    const candidate = await _getInstrument();
+    if (candidate !== _synth) {
+      // 古い楽器は「切断のみ」。dispose は絶対にしない（Transportコールバックが残っている可能性があるため）
+      try { _synth?.disconnect?.(); } catch {}
+      _synth = candidate;
+      // 二重接続ガードで接続
+      try {
+        if (!_synth._connectedToOut) {
+          _synth.disconnect?.();           // 念のため一旦切って
+          _synth.connect?.(_outGain);      // 出力バスへ接続
+          _synth._connectedToOut = true;   // 自前フラグで多重接続防止
+        }
+      } catch {}
+    } else {
+      // 同一実体なら、出力バスが再生成されていても良いように接続だけ保証
+      try {
+        if (!_synth._connectedToOut) {
+          _synth.disconnect?.();
+          _synth.connect?.(_outGain);
+          _synth._connectedToOut = true;
+        }
+      } catch {}
+    }
+  } else {
+    // 注入ファクトリが無い場合はデフォルトシンセ（PolySynth）を一度だけ生成し、以後使い回す
+    if (!_synth) {
+      _synth = createDefaultSynth();
+      try {
+        _synth.disconnect?.();
+        _synth.connect?.(_outGain);
+        _synth._connectedToOut = true;
+      } catch {}
+    } else {
+      try {
+        if (!_synth._connectedToOut) {
+          _synth.disconnect?.();
+          _synth.connect?.(_outGain);
+          _synth._connectedToOut = true;
+        }
+      } catch {}
+    }
+  }
 
+  // 再生範囲計算（そのまま）
   _totalEndSeconds = computeTotalEndSeconds(_midi);
   console.log(`[midi-player] totalEndSeconds = ${_totalEndSeconds.toFixed(3)}s`);
 }
+
 
 /** 再生中か？ */
 export function isPlaying() { return _isPlaying; }
