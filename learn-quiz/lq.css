@@ -73,3 +73,17 @@
 /* ユーティリティ */
 .lq-hidden{ display:none !important; }
 .lq-noscript{ color:var(--lq-muted); font-size:.95em; margin-top:8px; }
+
+
+/* モバイル表示時（600px以下）のリスト番号調整 */
+@media (max-width: 600px){
+  .lq-list {
+    padding-left: 0.8em; /* デフォルト1.2em → 少し縮める */
+  }
+  .lq-list > li::marker {
+    font-size: 0.85em;   /* 番号少し小さめで主張を弱める */
+  }
+  .lq-item {
+    margin-left: 0; /* Safariで::marker位置がズレるのを防ぐ */
+  }
+}
