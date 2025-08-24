@@ -1,0 +1,122 @@
+/* module/learn-quiz/lq.css
+   Learn-Quiz 共通スタイル（汎用）
+   - .lq- でスコープして他CSSとの衝突を最小化
+   - 読みやすい最小デザイン＋アクセント控えめ
+   - ダークモードは prefers-color-scheme に追従
+*/
+
+:root{
+  --lq-accent: #2563eb;         /* 最小アクセント（学習サイト向けの落ち着いた青） */
+  --lq-accent-weak: #e8f0ff;    /* 薄い青背景 */
+  --lq-border: #e5e7eb;         /* 枠線 */
+  --lq-text: #111827;           /* 本文 */
+  --lq-muted: #6b7280;          /* 補助テキスト */
+  --lq-bg: #ffffff;             /* カード背景 */
+}
+
+.lq-quiz{
+  max-width: 860px;
+  margin: 24px auto;
+  padding: 0 16px;
+  color: var(--lq-text);
+  line-height: 1.7;
+}
+
+.lq-heading{
+  font-size: clamp(1.25rem, 2vw, 1.5rem);
+  margin: 0 0 12px 0;
+}
+
+.lq-controls{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 8px 0 16px;
+}
+
+/* ボタン（控えめ＋フォーカスリング） */
+.lq-btn{
+  appearance: none;
+  font: inherit;
+  padding: .55em .9em;
+  border: 1px solid var(--lq-border);
+  border-radius: .5em;
+  background: #fff;
+  color: var(--lq-text);
+  cursor: pointer;
+}
+.lq-btn:hover{ background: #fafafa; }
+.lq-btn:focus-visible{
+  outline: 2px solid var(--lq-accent);
+  outline-offset: 2px;
+}
+.lq-btn--secondary{
+  background: var(--lq-accent-weak);
+  border-color: #c7dbff;
+}
+.lq-btn--ghost{
+  background: transparent;
+}
+
+/* 問題リスト */
+.lq-list{
+  list-style: decimal;
+  padding-left: 1.2em;
+  margin: 0;
+}
+.lq-item{ margin: 0 0 12px 0; }
+
+.lq-card{
+  background: var(--lq-bg);
+  border: 1px solid var(--lq-border);
+  border-radius: .75em;
+  padding: 14px 14px 10px;
+  box-shadow: 0 1px 0 rgba(0,0,0,.02);
+}
+
+/* 質問 */
+.lq-q{
+  font-weight: 700;
+  margin: 0 0 8px 0;
+}
+
+/* 回答（控えめな帯 + 解説は小さめ） */
+.lq-a{
+  background: #fafafa;
+  border-left: 4px solid var(--lq-accent);
+  padding: 10px 12px;
+  border-radius: .5em;
+}
+.lq-a small{
+  color: var(--lq-muted);
+  display: inline-block;
+  margin-top: 4px;
+}
+
+/* アクション行（「答えを見る」） */
+.lq-action{
+  margin: 8px 0 0;
+}
+
+/* ユーティリティ */
+.lq-hidden{ display: none !important; }
+.lq-noscript{
+  color: var(--lq-muted);
+  font-size: .95em;
+  margin-top: 8px;
+}
+
+/* ダークモード */
+@media (prefers-color-scheme: dark){
+  :root{
+    --lq-bg: #0f172a;
+    --lq-text: #e5e7eb;
+    --lq-muted: #9ca3af;
+    --lq-border: #1f2937;
+    --lq-accent-weak: #0b1b3d;
+  }
+  .lq-card{ box-shadow: none; }
+  .lq-a{ background: #0b1220; }
+  .lq-btn{ background: #0b1220; color: var(--lq-text); }
+  .lq-btn:hover{ background: #0f172a; }
+}
